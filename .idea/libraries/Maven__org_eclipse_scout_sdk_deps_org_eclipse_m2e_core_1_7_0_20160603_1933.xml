@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: org.eclipse.scout.sdk.deps:org.eclipse.m2e.core:1.7.0.20160603-1933">
+    <CLASSES>
+      <root url="jar://D:/Programme/Maven/.m2/repository/org/eclipse/scout/sdk/deps/org.eclipse.m2e.core/1.7.0.20160603-1933/org.eclipse.m2e.core-1.7.0.20160603-1933.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://D:/Programme/Maven/.m2/repository/org/eclipse/scout/sdk/deps/org.eclipse.m2e.core/1.7.0.20160603-1933/org.eclipse.m2e.core-1.7.0.20160603-1933-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://D:/Programme/Maven/.m2/repository/org/eclipse/scout/sdk/deps/org.eclipse.m2e.core/1.7.0.20160603-1933/org.eclipse.m2e.core-1.7.0.20160603-1933-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

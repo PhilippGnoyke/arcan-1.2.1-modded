@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: org.eclipse.tycho:org.eclipse.jdt.compiler.apt:1.2.0.v20150514-0146">
+    <CLASSES>
+      <root url="jar://D:/Programme/Maven/.m2/repository/org/eclipse/tycho/org.eclipse.jdt.compiler.apt/1.2.0.v20150514-0146/org.eclipse.jdt.compiler.apt-1.2.0.v20150514-0146.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://D:/Programme/Maven/.m2/repository/org/eclipse/tycho/org.eclipse.jdt.compiler.apt/1.2.0.v20150514-0146/org.eclipse.jdt.compiler.apt-1.2.0.v20150514-0146-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://D:/Programme/Maven/.m2/repository/org/eclipse/tycho/org.eclipse.jdt.compiler.apt/1.2.0.v20150514-0146/org.eclipse.jdt.compiler.apt-1.2.0.v20150514-0146-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
