@@ -1,13 +1,13 @@
 <component name="libraryTable">
   <library name="Maven: org.eclipse.scout.sdk.deps:org.eclipse.m2e.archetype.common:1.7.0.20160603-1931">
     <CLASSES>
-      <root url="jar://D:/Programme/Maven/.m2/repository/org/eclipse/scout/sdk/deps/org.eclipse.m2e.archetype.common/1.7.0.20160603-1931/org.eclipse.m2e.archetype.common-1.7.0.20160603-1931.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/scout/sdk/deps/org.eclipse.m2e.archetype.common/1.7.0.20160603-1931/org.eclipse.m2e.archetype.common-1.7.0.20160603-1931.jar!/" />
     </CLASSES>
     <JAVADOC>
-      <root url="jar://D:/Programme/Maven/.m2/repository/org/eclipse/scout/sdk/deps/org.eclipse.m2e.archetype.common/1.7.0.20160603-1931/org.eclipse.m2e.archetype.common-1.7.0.20160603-1931-javadoc.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/scout/sdk/deps/org.eclipse.m2e.archetype.common/1.7.0.20160603-1931/org.eclipse.m2e.archetype.common-1.7.0.20160603-1931-javadoc.jar!/" />
     </JAVADOC>
     <SOURCES>
-      <root url="jar://D:/Programme/Maven/.m2/repository/org/eclipse/scout/sdk/deps/org.eclipse.m2e.archetype.common/1.7.0.20160603-1931/org.eclipse.m2e.archetype.common-1.7.0.20160603-1931-sources.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/scout/sdk/deps/org.eclipse.m2e.archetype.common/1.7.0.20160603-1931/org.eclipse.m2e.archetype.common-1.7.0.20160603-1931-sources.jar!/" />
     </SOURCES>
   </library>
 </component>

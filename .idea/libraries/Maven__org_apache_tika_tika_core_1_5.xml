@@ -1,13 +1,13 @@
 <component name="libraryTable">
   <library name="Maven: org.apache.tika:tika-core:1.5">
     <CLASSES>
-      <root url="jar://D:/Programme/Maven/.m2/repository/org/apache/tika/tika-core/1.5/tika-core-1.5.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/apache/tika/tika-core/1.5/tika-core-1.5.jar!/" />
     </CLASSES>
     <JAVADOC>
-      <root url="jar://D:/Programme/Maven/.m2/repository/org/apache/tika/tika-core/1.5/tika-core-1.5-javadoc.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/apache/tika/tika-core/1.5/tika-core-1.5-javadoc.jar!/" />
     </JAVADOC>
     <SOURCES>
-      <root url="jar://D:/Programme/Maven/.m2/repository/org/apache/tika/tika-core/1.5/tika-core-1.5-sources.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/apache/tika/tika-core/1.5/tika-core-1.5-sources.jar!/" />
     </SOURCES>
   </library>
 </component>

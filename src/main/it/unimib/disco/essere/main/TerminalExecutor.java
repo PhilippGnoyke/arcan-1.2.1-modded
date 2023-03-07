@@ -92,14 +92,14 @@ public class TerminalExecutor {
 	private boolean _asTdEvolution = false;
 
 	// Modded
-	@Parameter(names = "-suppressNonAsTdEvolution", description = "Only output results of the modded features (td, supercycle CDs, etc.)")
+	@Parameter(names = {"-suppressNonAsTdEvolution", "-sup"}, description = "Only output results of the modded features (td, supercycle CDs, etc.)")
 	private boolean _suppressNonAsTdEvolution = false;
 
 	// Modded
 	@Parameter(names = "-mute", description = "Suppress any logging except for errors")
 	private boolean _muteLogging = false;
 
-	JCommander _k = null;
+	private JCommander _k;
     private final Logger logger = LogManager.getLogger(TerminalExecutor.class);
 	private final OutputDirUtils outputDirUtils = new OutputDirUtils();
 
@@ -120,14 +120,14 @@ public class TerminalExecutor {
 	 */
 	public static void main(String[] args) {
 		TerminalExecutor tt = new TerminalExecutor();
-        JCommander _k = new JCommander(tt);
-		_k.setCaseSensitiveOptions(false);
-		_k.setProgramName("java -jar Arcan.jar");
+        tt._k = new JCommander(tt);
+		tt._k.setCaseSensitiveOptions(false);
+		tt._k.setProgramName("java -jar Arcan.jar");
 		// _k.addCommand("metric",_parMetric);
 		// _k.addCommand("as",_parAS);
 		// _k.addCommand("all",_parAll);
 		// _k.addCommand("neo4j",_parNeo4j);
-		_k.parse(args);
+		tt._k.parse(args);
 		tt.initLoggingLevel(); // Modded
 		tt.logger.info("***Start of Terminal Executor***");
         tt.logger.info("*** args:" + args.length + "***");
@@ -400,4 +400,5 @@ public class TerminalExecutor {
 				parSet.get(s).getDescription(), parSet.get(s).getDefault()));
 
 	}
+
 }

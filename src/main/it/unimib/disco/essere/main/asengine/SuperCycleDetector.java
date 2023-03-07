@@ -20,8 +20,8 @@ public class SuperCycleDetector
     private List<Vertex> superCyclePackageCdSmells; //(reduce graph traversals)
 
     // Aliases
-    private static final String LBL_CLASS_DEP = PropertyEdge.LABEL_CLASS_DEPENDENCY.toString();
-    private static final String LBL_PACK_DEP = GraphBuilder.LABEL_PACKAGE_AFFERENCE;
+    public static final String LBL_CLASS_DEP = PropertyEdge.LABEL_CLASS_DEPENDENCY.toString();
+    public static final String LBL_PACK_DEP = GraphBuilder.LABEL_PACKAGE_AFFERENCE;
 
     public void detectAndRegisterSuperCycles
         (Graph graph, List<Vertex> classes, List<Vertex> packs, List<Vertex> classSubs, List<Vertex> packSubs)

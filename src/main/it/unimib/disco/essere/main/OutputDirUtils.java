@@ -47,6 +47,10 @@ public class OutputDirUtils {
 		createOutputDir(_outputfolder);
 	}
 
+	public void createSubDirFullPath(final File outputFolder) {
+		createOutputDir(outputFolder.getAbsolutePath());
+	}
+
 	public void createDirFullPath(final File outputFolder, final boolean singleFile) {
 		if (singleFile) {
 			_outputfolder = outputFolder.getAbsoluteFile().getParentFile().getAbsolutePath();
@@ -94,6 +98,18 @@ public class OutputDirUtils {
 				logger.debug("DIR created");
 			}
 		}
+	}
+
+	//Modded
+	public File getFolderInOutputFolder(final String subFolderName){
+		File f = Paths.get(_outputfolder,subFolderName).toAbsolutePath().toFile();
+		return f;
+	}
+
+	//Modded
+	public File getFileInSubOutputFolder(final String folderName,final String fileName){
+		File f = Paths.get(_outputfolder,folderName, fileName).toAbsolutePath().toFile();
+		return f;
 	}
 
 	public File getFileInOutputFolder(final String fileName){

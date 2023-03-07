@@ -4,6 +4,7 @@ import it.unimib.disco.essere.main.asengine.HubLikeDetector;
 import it.unimib.disco.essere.main.asengine.SuperCycleDetector;
 import it.unimib.disco.essere.main.asengine.UnstableDependencyDetector;
 import it.unimib.disco.essere.main.graphmanager.GraphBuilder;
+import it.unimib.disco.essere.main.graphmanager.GraphUtils;
 import it.unimib.disco.essere.main.metricsengine.ProjectMetricsCalculator;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
@@ -14,8 +15,7 @@ import org.apache.tinkerpop.gremlin.structure.Vertex;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Stream;
 
 public class AsTdEvolutionPrinter
@@ -29,6 +29,8 @@ public class AsTdEvolutionPrinter
     public static final String FILE_PACK_CDS_COMPS = "PackageCDsComponents.csv";
     public static final String FILE_HDS_COMPS = "HDsComponents.csv";
     public static final String FILE_UDS_COMPS = "UDsComponents.csv";
+    public static final String FOLDER_INTRA_VERSION_CLASS_CD_EDGES = "classCDEdges";
+    public static final String FOLDER_INTRA_VERSION_PACK_CD_EDGES = "packageCDEdges";
 
     public static final String ID = "id";
     public static final String AFFECTED_COMPS = "affectedComponents";
@@ -36,6 +38,10 @@ public class AsTdEvolutionPrinter
     public static final String LESS_STABLE_PACKS = "lessStableDependedOnPackages";
     public static final String AFFERENT_CLASSES = "afferentClasses";
     public static final String EFFERENT_CLASSES = "efferentClasses";
+
+    public static final String DEP_EDGE_OUT = "dependency edge outgoing from";
+    public static final String DEP_EDGE_IN = "dependency edge incoming to...";
+
 
     public static final String DELIMITER = ",";
 
@@ -70,6 +76,11 @@ public class AsTdEvolutionPrinter
     private void printCore(String file, String[] headers, PrinterCore printerCore) throws IOException, NullPointerException
     {
         File fileCsv = outputDirUtils.getFileInOutputFolder(file);
+        printCore(fileCsv,headers,printerCore);
+    }
+
+    private void printCore(File fileCsv, String[] headers, PrinterCore printerCore) throws IOException, NullPointerException
+    {
         CSVFormat formatter = CSVFormat.EXCEL.withHeader(headers);
         FileWriter writer = new FileWriter(fileCsv);
         CSVPrinter printer = new CSVPrinter(writer, formatter);
@@ -157,6 +168,11 @@ public class AsTdEvolutionPrinter
             GraphBuilder.PROPERTY_INSTABILITY_GAP_3RD_QUARTILE
         });
 
+    public final static String[] cdEdgeHeaders = new String[]{
+        DEP_EDGE_OUT,
+        DEP_EDGE_IN
+    };
+
     public final static String[] cdCompHeaders = new String[]{
         ID,
         AFFECTED_COMPS
@@ -180,16 +196,29 @@ public class AsTdEvolutionPrinter
         printCore(FILE_PROJECT, projectMetricsHeaders, new ProjectMetricsPrinter());
     }
 
+    //TODO
     public void printClassCds() throws IOException, NullPointerException
     {
         printCore(FILE_CLASS_CDS_PROPS, classCdPropHeaders, new CdPropsPrinter(GraphBuilder.CLASS));
         printCore(FILE_CLASS_CDS_COMPS, cdCompHeaders, new CdCompsPrinter(GraphBuilder.CLASS));
+        outputDirUtils.createSubDirFullPath(outputDirUtils.getFolderInOutputFolder(FOLDER_INTRA_VERSION_CLASS_CD_EDGES));
+        for(Vertex smell: classSupercycles)
+        {
+            File file = outputDirUtils.getFileInSubOutputFolder(FOLDER_INTRA_VERSION_CLASS_CD_EDGES,smell.id().toString()+".csv");
+            printCore(file, cdEdgeHeaders, new CdEdgesPrinter(GraphBuilder.CLASS,smell));
+        }
     }
 
     public void printPackCds() throws IOException, NullPointerException
     {
         printCore(FILE_PACK_CDS_PROPS, packCdPropHeaders, new CdPropsPrinter(GraphBuilder.PACKAGE));
         printCore(FILE_PACK_CDS_COMPS, cdCompHeaders, new CdCompsPrinter(GraphBuilder.PACKAGE));
+        outputDirUtils.createSubDirFullPath(outputDirUtils.getFolderInOutputFolder(FOLDER_INTRA_VERSION_PACK_CD_EDGES));
+        for(Vertex smell: packSupercycles)
+        {
+            File file = outputDirUtils.getFileInSubOutputFolder(FOLDER_INTRA_VERSION_PACK_CD_EDGES,smell.id().toString()+".csv");
+            printCore(file, cdEdgeHeaders, new CdEdgesPrinter(GraphBuilder.PACKAGE,smell));
+        }
     }
 
     public void printHds() throws IOException, NullPointerException
@@ -254,18 +283,34 @@ public class AsTdEvolutionPrinter
 
     private class CdCompsPrinter implements PrinterCore
     {
-        private String level;
+        private final String level;
 
-        public CdCompsPrinter(String level)
+        public CdCompsPrinter(String level) { this.level = level; }
+
+        public void print(String[] headers, CSVPrinter printer) throws IOException
         {
+            cdCompPrinterCore(printer, level.equals(GraphBuilder.CLASS) ? classSupercycles : packSupercycles);
+        }
+    }
+
+    //TODO
+    private class CdEdgesPrinter implements PrinterCore
+    {
+        private final String level;
+        private final Vertex smell;
+
+        public CdEdgesPrinter(String level, Vertex smell) {
             this.level = level;
+            this.smell = smell;
         }
 
         public void print(String[] headers, CSVPrinter printer) throws IOException
         {
-            cdCompPrinterCore(printer,  level.equals(GraphBuilder.CLASS) ? classSupercycles : packSupercycles);
+            String depLabel = level.equals(GraphBuilder.CLASS) ? SuperCycleDetector.LBL_CLASS_DEP : SuperCycleDetector.LBL_PACK_DEP;
+            printCdEdgesCore(printer, smell, depLabel);
         }
     }
+
 
     private class HdCompsPrinter implements PrinterCore
     {
@@ -296,6 +341,16 @@ public class AsTdEvolutionPrinter
             printer.println();
         }
     }
+
+    //TODO
+    private static void cdEdgesPrinterCore(CSVPrinter printer, List<Vertex> smells, String depLabel) throws IOException
+    {
+        for (Vertex smell : smells)
+        {
+            printCdEdgesCore(printer, smell, depLabel);
+        }
+    }
+
 
     private static void cdCompPrinterCore(CSVPrinter printer, List<Vertex> smells) throws IOException
     {
@@ -345,4 +400,50 @@ public class AsTdEvolutionPrinter
         compNames.deleteCharAt(compNames.length() - 1);
         printer.print(compNames);
     }
+
+    //TODO
+    private static void printCdEdgesCore(CSVPrinter printer, Vertex supercycle, String depLabel) throws IOException
+    {
+        Iterator<Edge> compEdges = supercycle.edges(Direction.OUT, GraphBuilder.LABEL_SUPERCYCLE_AFFECTED);
+
+        List<Vertex> affected = new ArrayList<>();
+        Map<Vertex, Integer> indexMap = new HashMap<>();
+        int size = 0;
+
+        while (compEdges.hasNext())
+        {
+            Vertex comp = compEdges.next().inVertex();
+            affected.add(comp);
+            indexMap.put(comp, size);
+            size++;
+        }
+
+        List<Edge> depEdges = GraphUtils.allEdgesBetweenVertices(new HashSet<>(affected), depLabel);
+        boolean[][] edgeMatrix = new boolean[size][size];
+
+        for (Edge edge : depEdges)
+        {
+            int in = indexMap.get(edge.inVertex());
+            int out = indexMap.get(edge.outVertex());
+            edgeMatrix[out][in] = true;
+        }
+        printer.print("");
+        for (int i = 0; i < size; i++)
+        {
+
+            printer.print(affected.get(i).value(GraphBuilder.PROPERTY_NAME));
+        }
+        printer.println();
+
+        for(int i = 0; i < size; i++)
+        {
+            for (int j = 0; j < size; j++)
+            {
+                if(j==0) { printer.print(affected.get(i).value(GraphBuilder.PROPERTY_NAME)); }
+                printer.print(edgeMatrix[i][j]?1:0);
+            }
+            printer.println();
+        }
+    }
+
 }
