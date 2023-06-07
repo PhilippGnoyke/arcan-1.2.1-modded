@@ -76,7 +76,7 @@ public class AsTdEvolutionPrinter
     private void printCore(String file, String[] headers, PrinterCore printerCore) throws IOException, NullPointerException
     {
         File fileCsv = outputDirUtils.getFileInOutputFolder(file);
-        printCore(fileCsv,headers,printerCore);
+        printCore(fileCsv, headers, printerCore);
     }
 
     private void printCore(File fileCsv, String[] headers, PrinterCore printerCore) throws IOException, NullPointerException
@@ -196,16 +196,15 @@ public class AsTdEvolutionPrinter
         printCore(FILE_PROJECT, projectMetricsHeaders, new ProjectMetricsPrinter());
     }
 
-    //TODO
     public void printClassCds() throws IOException, NullPointerException
     {
         printCore(FILE_CLASS_CDS_PROPS, classCdPropHeaders, new CdPropsPrinter(GraphBuilder.CLASS));
         printCore(FILE_CLASS_CDS_COMPS, cdCompHeaders, new CdCompsPrinter(GraphBuilder.CLASS));
         outputDirUtils.createSubDirFullPath(outputDirUtils.getFolderInOutputFolder(FOLDER_INTRA_VERSION_CLASS_CD_EDGES));
-        for(Vertex smell: classSupercycles)
+        for (Vertex smell : classSupercycles)
         {
-            File file = outputDirUtils.getFileInSubOutputFolder(FOLDER_INTRA_VERSION_CLASS_CD_EDGES,smell.id().toString()+".csv");
-            printCore(file, cdEdgeHeaders, new CdEdgesPrinter(GraphBuilder.CLASS,smell));
+            File file = outputDirUtils.getFileInSubOutputFolder(FOLDER_INTRA_VERSION_CLASS_CD_EDGES, smell.id().toString() + ".csv");
+            printCore(file, cdEdgeHeaders, new CdEdgesPrinter(GraphBuilder.CLASS, smell));
         }
     }
 
@@ -214,10 +213,10 @@ public class AsTdEvolutionPrinter
         printCore(FILE_PACK_CDS_PROPS, packCdPropHeaders, new CdPropsPrinter(GraphBuilder.PACKAGE));
         printCore(FILE_PACK_CDS_COMPS, cdCompHeaders, new CdCompsPrinter(GraphBuilder.PACKAGE));
         outputDirUtils.createSubDirFullPath(outputDirUtils.getFolderInOutputFolder(FOLDER_INTRA_VERSION_PACK_CD_EDGES));
-        for(Vertex smell: packSupercycles)
+        for (Vertex smell : packSupercycles)
         {
-            File file = outputDirUtils.getFileInSubOutputFolder(FOLDER_INTRA_VERSION_PACK_CD_EDGES,smell.id().toString()+".csv");
-            printCore(file, cdEdgeHeaders, new CdEdgesPrinter(GraphBuilder.PACKAGE,smell));
+            File file = outputDirUtils.getFileInSubOutputFolder(FOLDER_INTRA_VERSION_PACK_CD_EDGES, smell.id().toString() + ".csv");
+            printCore(file, cdEdgeHeaders, new CdEdgesPrinter(GraphBuilder.PACKAGE, smell));
         }
     }
 
@@ -293,13 +292,13 @@ public class AsTdEvolutionPrinter
         }
     }
 
-    //TODO
     private class CdEdgesPrinter implements PrinterCore
     {
         private final String level;
         private final Vertex smell;
 
-        public CdEdgesPrinter(String level, Vertex smell) {
+        public CdEdgesPrinter(String level, Vertex smell)
+        {
             this.level = level;
             this.smell = smell;
         }
@@ -341,16 +340,6 @@ public class AsTdEvolutionPrinter
             printer.println();
         }
     }
-
-    //TODO
-    private static void cdEdgesPrinterCore(CSVPrinter printer, List<Vertex> smells, String depLabel) throws IOException
-    {
-        for (Vertex smell : smells)
-        {
-            printCdEdgesCore(printer, smell, depLabel);
-        }
-    }
-
 
     private static void cdCompPrinterCore(CSVPrinter printer, List<Vertex> smells) throws IOException
     {
@@ -401,7 +390,6 @@ public class AsTdEvolutionPrinter
         printer.print(compNames);
     }
 
-    //TODO
     private static void printCdEdgesCore(CSVPrinter printer, Vertex supercycle, String depLabel) throws IOException
     {
         Iterator<Edge> compEdges = supercycle.edges(Direction.OUT, GraphBuilder.LABEL_SUPERCYCLE_AFFECTED);
@@ -427,23 +415,20 @@ public class AsTdEvolutionPrinter
             int out = indexMap.get(edge.outVertex());
             edgeMatrix[out][in] = true;
         }
-        printer.print("");
+
         for (int i = 0; i < size; i++)
         {
-
             printer.print(affected.get(i).value(GraphBuilder.PROPERTY_NAME));
         }
         printer.println();
-
-        for(int i = 0; i < size; i++)
+        for (int i = 0; i < size; i++)
         {
             for (int j = 0; j < size; j++)
             {
-                if(j==0) { printer.print(affected.get(i).value(GraphBuilder.PROPERTY_NAME)); }
-                printer.print(edgeMatrix[i][j]?1:0);
+                if (j == 0) { printer.print(affected.get(i).value(GraphBuilder.PROPERTY_NAME)); }
+                printer.print(edgeMatrix[i][j] ? 1 : 0);
             }
             printer.println();
         }
     }
-
 }
