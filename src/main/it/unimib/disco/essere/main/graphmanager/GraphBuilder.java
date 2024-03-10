@@ -50,6 +50,21 @@ public class GraphBuilder {
 	public static final String PROPERTY_HUB_RATIO = "hubRatio"; // Modded
 	public static final String PROPERTY_NUM_INHERIT_EDGES = "numInheritEdges"; // Modded
 	public static final String PROPERTY_REL_NUM_INHERIT_EDGES = "relNumInheritEdges"; // Modded
+	public static final String PROPERTY_BACKREF_SHARE = "backrefShare"; // Modded
+	public static final String PROPERTY_DENSITY = "density"; // Modded
+	public static final String PROPERTY_MEFS_SIZE = "mEFSSize"; // Modded
+	public static final String PROPERTY_MEFS_SIZE_WO_TINYS = "mEFSSizeWOTinys"; // Modded
+	public static final String PROPERTY_MEFS = "mEFS"; // Modded
+	public static final String PROPERTY_MEFS_WO_TINYS = "mEFSWOTinys"; // Modded
+	public static final String PROPERTY_REL_MEFS_SIZE = "relmEFS"; // Modded
+	public static final String PROPERTY_REL_MEFS_SIZE_WO_TINYS = "relmEFSWOTinys"; // Modded
+	public static final String PROPERTY_REL_MEFS_SIZE_WO_TINYS_REDUCTION = "mEFSWOTinysReduction"; // Modded
+
+	public static final String PROPERTY_NUM_PACKAGES = "numPackages"; // Modded
+	public static final String PROPERTY_SHARE_CLASSES = "shareClassesInVersion"; // Modded
+	public static final String PROPERTY_SHARE_PACKAGES = "sharePackagesInVersion"; // Modded
+	public static final String PROPERTY_NUM_CLASS_SUPERCYCLES = "numClassSupercycles"; // Modded
+	public static final String PROPERTY_NUM_STRONG_PACK_SUPERCYCLES = "numStrongPackCycles"; // Modded
 
 	//property metrics package
 	public static final String PROPERTY_INSTABILITY = "instability";
@@ -120,6 +135,7 @@ public class GraphBuilder {
 	public static final String LABEL_CYCLE_AFFECTED = "partOfCycle";
 	public static final String LABEL_SUPERCYCLE_AFFECTED = "partOfSuperCycle"; // Modded
 	public static final String LABEL_SUB_OF_SUPERCYCLE = "subOfSuperCycle"; // Modded
+	public static final String LABEL_CLASS_CYCLE_IN_PACK = "classCycleInPack"; // Modded
 	public static final String LABEL_START_CYCLE = "cycleStart";
 	public static final String LABEL_IS_CENTRE_OF_STAR = "isCentreOfStar";
 	public static final String LABEL_IS_PART_OF_STAR = "isPartOfStar";
@@ -135,6 +151,11 @@ public class GraphBuilder {
 	public static final String IS_PART_OF_COMPONENT = "isPartOfComponent";
 
 	public static final String DEFAULT_PACKAGE = "(default package)";
+
+	//aliasas
+	public static final String LBL_CLASS_DEP = PropertyEdge.LABEL_CLASS_DEPENDENCY.toString();
+	public static final String LBL_PACK_DEP = GraphBuilder.LABEL_PACKAGE_AFFERENCE;
+
 
 	private static final Logger logger = LogManager.getLogger(GraphBuilder.class);
 
@@ -520,6 +541,12 @@ public class GraphBuilder {
 
 		return classInfo;
 
+	}
+
+	// Modded
+	public static boolean isClassLevel(String depLabel)
+	{
+		return depLabel.equals(PropertyEdge.LABEL_CLASS_DEPENDENCY.toString());
 	}
 
 	// Modded

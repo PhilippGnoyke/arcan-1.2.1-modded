@@ -36,12 +36,12 @@ public class PageRankCalculator
             case LEVEL_CLASS:
             default:
                 vertexLabel = GraphBuilder.CLASS;
-                dependencyLabel = PropertyEdge.LABEL_CLASS_DEPENDENCY.toString();
+                dependencyLabel = GraphBuilder.LBL_CLASS_DEP;
                 couplingLabel = GraphBuilder.PROPERTY_FANOUT;
                 break;
             case LEVEL_PACKAGE:
                 vertexLabel = GraphBuilder.PACKAGE;
-                dependencyLabel = GraphBuilder.LABEL_PACKAGE_AFFERENCE;
+                dependencyLabel = GraphBuilder.LBL_PACK_DEP;
                 couplingLabel = GraphBuilder.PROPERTY_NUM_TOTAL_DEPENDENCIES;
                 break;
         }

@@ -827,7 +827,7 @@ public class InterfaceModel
         hds = _hubLikeDetector.getListOfHubLikeSmells();
         uds = _unstableDependencyDetector.getListOfUDSmells();
         _superCycleDetector = new SuperCycleDetector();
-        _superCycleDetector.detectAndRegisterSuperCycles(graph, classes,packages,classCds,packCds);
+        _superCycleDetector.detectAndRegisterSuperCycles(graph, classes,packages,classCds,packCds,packCount,classCount);
         classSupercycles = _superCycleDetector.getListOfSuperCycleSmells(GraphBuilder.CLASS);
         packSupercycles = _superCycleDetector.getListOfSuperCycleSmells(GraphBuilder.PACKAGE);
         return true;
@@ -866,11 +866,20 @@ public class InterfaceModel
     public boolean calculateMiscMetrics(int loc)
     {
         _projectMetricsCalculator.updateAsCounts(loc);
-        _projectMetricsCalculator.calculateProjectTdMetrics();
-        MiscSmellMetricsCalculator miscSmellMetricsCalculator = new MiscSmellMetricsCalculator(hds,uds);
+        MiscSmellMetricsCalculator miscSmellMetricsCalculator =
+            new MiscSmellMetricsCalculator(hds,uds,packSupercycles,packCount,classCount);
         miscSmellMetricsCalculator.calculateAll();
+        _projectMetricsCalculator.calculateSmellPropertyAggregates();
         return true;
     }
+
+    // Modded
+    public boolean calculateMiscTdMetrics()
+    {
+        _projectMetricsCalculator.calculateProjectTdMetrics();
+        return true;
+    }
+
 
     // Modded
     public boolean printAsTdEvolution() throws IOException

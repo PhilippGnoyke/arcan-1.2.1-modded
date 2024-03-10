@@ -46,7 +46,7 @@ public class ClassMetricsCalculator {
 	 */
 
 	public int calculateFanOut(final Vertex classVertex) throws TypeVertexException {
-		List<Edge> dependencesEdges = calculateClassEdges(classVertex, PropertyEdge.LABEL_CLASS_DEPENDENCY.toString(),
+		List<Edge> dependencesEdges = calculateClassEdges(classVertex, GraphBuilder.LBL_CLASS_DEP,
 				Direction.OUT);
 		if(dependencesEdges == null){
 			return 0;
@@ -67,7 +67,7 @@ public class ClassMetricsCalculator {
 	 * @throws TypeVertexException
 	 */
 	public int calculateFanIn(final Vertex classVertex) throws TypeVertexException {
-		List<Edge> dependencesEdges = calculateClassEdges(classVertex, PropertyEdge.LABEL_CLASS_DEPENDENCY.toString(),
+		List<Edge> dependencesEdges = calculateClassEdges(classVertex, GraphBuilder.LBL_CLASS_DEP,
 				Direction.IN);
 		if(dependencesEdges == null){
 			return 0;
@@ -93,7 +93,7 @@ public class ClassMetricsCalculator {
 	 * @throws TypeVertexException
 	 */
 	public int calculateCBO(final Vertex classVertex) throws TypeVertexException {
-		List<Edge> dependecesEdges = calculateClassEdges(classVertex, PropertyEdge.LABEL_CLASS_DEPENDENCY.toString(),
+		List<Edge> dependecesEdges = calculateClassEdges(classVertex, GraphBuilder.LBL_CLASS_DEP,
 				Direction.OUT);
 
 		Set<Vertex> vcs = new HashSet<Vertex>();

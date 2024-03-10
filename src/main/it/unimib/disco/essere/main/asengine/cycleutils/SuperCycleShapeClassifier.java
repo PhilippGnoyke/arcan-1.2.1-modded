@@ -23,10 +23,12 @@ public class SuperCycleShapeClassifier
     private static final double HUB_MULTIHUB = 0.5;
     private static final double DENSE_SEMICLIQUE = 0.45;
 
+    private Vertex supercycle;
     private Set<Vertex> comps;
     private List<Edge> edges;
     private int order;
     private int size;
+    private double backref;
     private String vertexType;
     private String edgesIn;
     private String edgesOut;
@@ -34,8 +36,9 @@ public class SuperCycleShapeClassifier
 
     private Map<Vertex, Set<Vertex>> friends;
 
-    public SuperCycleShapeClassifier(Set<Vertex> comps, List<Edge> edges, int order, int size, String vertexType)
+    public SuperCycleShapeClassifier(Vertex supercycle, Set<Vertex> comps, List<Edge> edges, int order, int size, String vertexType)
     {
+        this.supercycle = supercycle;
         this.comps = comps;
         this.edges = edges;
         this.order = order;
@@ -48,14 +51,15 @@ public class SuperCycleShapeClassifier
             default:
                 edgesIn = GraphBuilder.PROPERTY_FANIN;
                 edgesOut = GraphBuilder.PROPERTY_FANOUT;
-                dependencyLabel = PropertyEdge.LABEL_CLASS_DEPENDENCY.toString();
+                dependencyLabel = GraphBuilder.LBL_CLASS_DEP;
                 break;
             case GraphBuilder.PACKAGE:
                 edgesIn = GraphBuilder.PROPERTY_CA;
                 edgesOut = GraphBuilder.PROPERTY_NUM_TOTAL_DEPENDENCIES;
-                dependencyLabel = GraphBuilder.LABEL_PACKAGE_AFFERENCE;
+                dependencyLabel = GraphBuilder.LBL_PACK_DEP;
                 break;
         }
+        this.backref = backref();
     }
 
     public String classifyShape()
@@ -68,7 +72,7 @@ public class SuperCycleShapeClassifier
         {
             return GraphBuilder.CIRCLE;
         }
-        if (backref() >= BACKREF_CLIQUE)
+        if (backref >= BACKREF_CLIQUE)
         {
             if (dense() >= DENSE_CLIQUE)
             {
@@ -120,7 +124,9 @@ public class SuperCycleShapeClassifier
                 }
             }
         }
-        return (double) backrefCount * 2 / size;
+        double backrefShare = (double) backrefCount * 2 / size;
+        supercycle.property(GraphBuilder.PROPERTY_BACKREF_SHARE, backrefShare);
+        return backrefShare;
     }
 
     private void addToFriends(Vertex vertex1, Vertex vertex2)

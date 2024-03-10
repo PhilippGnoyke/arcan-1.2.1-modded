@@ -249,6 +249,7 @@ public class TerminalExecutor {
 						model.initProjectMetricsCalculator();
 						model.calculateTdAndOverlapRatios();
 						model.calculateMiscMetrics(_loc);
+						model.calculateMiscTdMetrics();
 						model.printAsTdEvolution();
 					}
 					// Modded (additional condition)

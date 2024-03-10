@@ -331,4 +331,35 @@ public class GraphUtils {
     {
         vertex.property(property,(int) vertex.value(property) + 1);
     }
+
+
+    // Modded
+    // Returns the set of backref edges between a set of vertices
+    public static List<Edge> allBackrefEdgesBetweenVertices(Set<Vertex> vertices, String... labels)
+    {
+        List<Edge> edges = new ArrayList<>();
+
+
+        for(Vertex vertex : vertices)
+        {
+            Iterator<Edge> localEdges = vertex.edges(Direction.OUT,labels);
+            while(localEdges.hasNext())
+            {
+                Edge localEdge = localEdges.next();
+                if(vertices.contains(localEdge.inVertex()))
+                {
+                    edges.add(localEdge);
+                }
+            }
+        }
+        return edges;
+    }
+
+    //Modded
+    public static Vertex getPackageOfClass(Vertex classVertex)
+    {
+        return classVertex.edges(Direction.OUT,PropertyEdge.LABEL_PACKAGE_DEPENDENCY.toString()).next().inVertex();
+    }
+
 }
+

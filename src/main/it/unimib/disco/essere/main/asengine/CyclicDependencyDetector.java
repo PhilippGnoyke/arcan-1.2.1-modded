@@ -62,7 +62,7 @@ public class CyclicDependencyDetector {
         logger.debug("***Start Cycle detection with Gephi algorithm***");
         SedgewickWayneDFSCycleDetectionAlg algoC = new SedgewickWayneDFSCycleDetectionAlg(this,
                 classes,
-                GraphUtils.findEdgesByLabel(graph, PropertyEdge.LABEL_CLASS_DEPENDENCY.toString()), graph, path,
+                GraphUtils.findEdgesByLabel(graph, GraphBuilder.LBL_CLASS_DEP), graph, path,
                 GraphBuilder.CLASS,_suppressNonAsTdEvolution);
         algoC.execute();
 
@@ -91,7 +91,7 @@ public class CyclicDependencyDetector {
 
         logger.debug("***Start Internal Class Cycle detection with Gephi algorithm***");
         SedgewickWayneDFSCycleDetectionAlg algoC = new SedgewickWayneDFSCycleDetectionAlg(this,classVertices,
-                GraphUtils.findEdgesByLabel(graph, PropertyEdge.LABEL_CLASS_DEPENDENCY.toString()), graph, path,
+                GraphUtils.findEdgesByLabel(graph, GraphBuilder.LBL_CLASS_DEP), graph, path,
                 GraphBuilder.CLASS,_suppressNonAsTdEvolution);
         algoC.execute();
 

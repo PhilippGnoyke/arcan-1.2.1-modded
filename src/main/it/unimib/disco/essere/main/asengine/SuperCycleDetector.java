@@ -18,22 +18,23 @@ public class SuperCycleDetector
 
     private List<Vertex> superCycleClassCdSmells; //(reduce graph traversals)
     private List<Vertex> superCyclePackageCdSmells; //(reduce graph traversals)
-
-    // Aliases
-    public static final String LBL_CLASS_DEP = PropertyEdge.LABEL_CLASS_DEPENDENCY.toString();
-    public static final String LBL_PACK_DEP = GraphBuilder.LABEL_PACKAGE_AFFERENCE;
+    private int packCount;
+    private int classCount;
 
     public void detectAndRegisterSuperCycles
-        (Graph graph, List<Vertex> classes, List<Vertex> packs, List<Vertex> classSubs, List<Vertex> packSubs)
+        (Graph graph, List<Vertex> classes, List<Vertex> packs, List<Vertex> classSubs, List<Vertex> packSubs,
+         int packCount, int classCount)
     {
-        superCycleClassCdSmells = detectAndRegisterSuperCyclesCore(graph, classes, GraphBuilder.CLASS, LBL_CLASS_DEP, classSubs);
-        superCyclePackageCdSmells = detectAndRegisterSuperCyclesCore(graph, packs, GraphBuilder.PACKAGE, LBL_PACK_DEP, packSubs);
+        this.packCount = packCount;
+        this.classCount = classCount;
+        superCycleClassCdSmells = detectAndRegisterSuperCyclesCore(graph, classes, GraphBuilder.CLASS, GraphBuilder.LBL_CLASS_DEP, classSubs);
+        superCyclePackageCdSmells = detectAndRegisterSuperCyclesCore(graph, packs, GraphBuilder.PACKAGE, GraphBuilder.LBL_PACK_DEP, packSubs);
     }
 
     private List<Vertex> detectAndRegisterSuperCyclesCore
         (Graph graph, List<Vertex> comps, String vertexType, String depLabel, List<Vertex> subcycles)
     {
-        TarjansAlgorithm tarjansAlgorithm = new TarjansAlgorithm(graph, comps, vertexType, depLabel);
+        TarjansAlgorithm tarjansAlgorithm = new TarjansAlgorithm(graph, comps, vertexType, depLabel,packCount,classCount);
         tarjansAlgorithm.calc();
         List<Vertex> supercycles = tarjansAlgorithm.getSupercycles();
         assignSubCycles(subcycles,tarjansAlgorithm.getVertexIdsToSupercycleIds());
@@ -48,7 +49,7 @@ public class SuperCycleDetector
             Object cycleStartId = GraphUtils.getEdgesByVertex
                 (GraphBuilder.LABEL_START_CYCLE, subCycle, Direction.OUT).get(0).inVertex().id();
             Vertex supercycle = vertexIdsToSupercycles.get(cycleStartId);
-            supercycle.addEdge(GraphBuilder.LABEL_SUB_OF_SUPERCYCLE, subCycle);
+            subCycle.addEdge(GraphBuilder.LABEL_SUB_OF_SUPERCYCLE, supercycle);
             GraphUtils.incrementVertexIntProperty(supercycle, GraphBuilder.PROPERTY_NUM_SUBCYCLES);
         }
     }

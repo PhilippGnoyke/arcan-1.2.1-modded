@@ -1,10 +1,7 @@
 package it.unimib.disco.essere.main.metricsengine;
 
-import it.unimib.disco.essere.main.asengine.HubLikeDetector;
-import it.unimib.disco.essere.main.asengine.UnstableDependencyDetector;
 import it.unimib.disco.essere.main.graphmanager.GraphBuilder;
 import it.unimib.disco.essere.main.graphmanager.GraphUtils;
-import it.unimib.disco.essere.main.graphmanager.PropertyEdge;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Edge;
@@ -18,23 +15,35 @@ public class MiscSmellMetricsCalculator
     private final static int QUARTILE_2_PERCENTILE = 50;
     private final static int QUARTILE_3_PERCENTILE = 75;
 
-    // Aliases
-    private static final String LBL_CLASS_DEP = PropertyEdge.LABEL_CLASS_DEPENDENCY.toString();
-    private static final String LBL_PACK_DEP = GraphBuilder.LABEL_PACKAGE_AFFERENCE;
-
     private List<Vertex> hds;
     private List<Vertex> uds;
+    private List<Vertex> packCds;
+    private int packCount;
+    private int classCount;
 
-    public MiscSmellMetricsCalculator(List<Vertex> hds, List<Vertex> uds)
+    public MiscSmellMetricsCalculator(List<Vertex> hds, List<Vertex> uds, List<Vertex> packCds,
+                                      int packCount, int classCount)
     {
         this.hds = hds;
         this.uds = uds;
+        this.packCds = packCds;
+        this.packCount = packCount;
+        this.classCount = classCount;
     }
 
     public void calculateAll()
     {
         calcUdMetrics();
         calcHdMetrics();
+        calcPackCdMetrics();
+    }
+
+    private void calcPackCdMetrics()
+    {
+        for (Vertex smell : packCds)
+        {
+            calcWeakStrongPackCycleMetrics(smell);
+        }
     }
 
     private void calcUdMetrics()
@@ -44,8 +53,10 @@ public class MiscSmellMetricsCalculator
 
         for (Vertex smell : uds)
         {
-            calcHdUdSize(smell, LBL_PACK_DEP, GraphBuilder.LABEL_AFFECTED_PACKAGE);
+            calcHdUdSize(smell);
             calcInstGapQuartiles(smell, percentile);
+            int order = smell.value(GraphBuilder.PROPERTY_ORDER);
+            smell.property(GraphBuilder.PROPERTY_SHARE_PACKAGES, (double)order/packCount);
         }
     }
 
@@ -53,37 +64,61 @@ public class MiscSmellMetricsCalculator
     {
         for (Vertex smell : hds)
         {
-            calcHdUdSize(smell, LBL_CLASS_DEP, GraphBuilder.LABEL_AFFECTED_CLASS);
+            calcHdUdSize(smell);
             calcHubRatio(smell);
+            calcNumPackages(smell,packCount);
+            int order = smell.value(GraphBuilder.PROPERTY_ORDER);
+            smell.property(GraphBuilder.PROPERTY_SHARE_CLASSES, (double) order/classCount);
         }
     }
 
-
-    private static void calcHdUdSize(Vertex smell, String depLabel, String mainModuleLabel)
+    private static void calcHdUdSize(Vertex smell)
     {
         Set<Vertex> affectedModules = new HashSet<>(); // excluding the main module
-        int size = 0;
-        Iterator<Edge> edges = smell.edges(Direction.OUT);
-        while (edges.hasNext())
+        Iterator<Edge> affectedEdges = smell.edges(Direction.OUT);
+        while (affectedEdges.hasNext())
         {
-            Edge edge = edges.next();
-            if (!edge.label().equals(mainModuleLabel))
-            {
-                size++;
-                affectedModules.add(edge.inVertex());
-            }
+            Edge edge = affectedEdges.next();
+            affectedModules.add(edge.inVertex());
         }
-        size += GraphUtils.allEdgesBetweenVertices(affectedModules, depLabel).size();
+        List<Edge> allEdges = GraphUtils.allEdgesBetweenVertices(affectedModules);
+        int size = allEdges.size();
+        int order = (int) smell.value(GraphBuilder.PROPERTY_ORDER);
         smell.property(GraphBuilder.PROPERTY_SIZE, size);
-        calcHdUdOverComplexity(smell, size);
+        calcHdUdOverComplexity(smell, order, size);
+        calcBackrefShare(smell,allEdges,size);
     }
 
-    private static void calcHdUdOverComplexity(Vertex smell, int size)
+    private static void calcHdUdOverComplexity(Vertex smell, int order, int size)
     {
-        int minSize = (int) smell.value(GraphBuilder.PROPERTY_ORDER) - 1;
+        int minSize = order - 1;
         calcSizeOverComplexity(smell, size, minSize);
     }
 
+    public static void calcSmellDensity(Vertex smell,double order, double size)
+    {
+        double density = (order==2)? 0 : (size - order)/(order*order-2*order);
+        smell.property(GraphBuilder.PROPERTY_DENSITY, density);
+    }
+
+    public static Set<Vertex> calcNumPackages(Vertex smell, int packCount)
+    {
+        return calcNumPackages( smell,  packCount,  GraphBuilder.LABEL_AFFECTED_CLASS);
+    }
+
+    public static Set<Vertex> calcNumPackages(Vertex smell, int packCount, String affectedLabel)
+    {
+        Set<Vertex> affectPackages = new HashSet<>();
+        Iterator<Edge> edges = smell.edges(Direction.OUT, affectedLabel);
+        while (edges.hasNext())
+        {
+            Vertex classVertex = edges.next().inVertex();
+            affectPackages.add(GraphUtils.getPackageOfClass(classVertex));
+        }
+        smell.property(GraphBuilder.PROPERTY_NUM_PACKAGES, affectPackages.size());
+        smell.property(GraphBuilder.PROPERTY_SHARE_PACKAGES, (double)affectPackages.size()/packCount);
+        return affectPackages;
+    }
 
     public static void calcSizeOverComplexity(Vertex smell, int size, int minSize)
     {
@@ -128,4 +163,64 @@ public class MiscSmellMetricsCalculator
     }
 
 
+    private static void calcBackrefShare(Vertex smell, List<Edge> edges, int size)
+    {
+        int backrefCount = 0;
+        for (int i = 0; i < size; i++)
+        {
+            Edge edge1 = edges.get(i);
+            Vertex inVertex1 = edge1.inVertex();
+            Vertex outVertex1 = edge1.outVertex();
+            for (int j = i + 1; j < size; j++)
+            {
+                Edge edge2 = edges.get(j);
+                Vertex inVertex2 = edge2.inVertex();
+                Vertex outVertex2 = edge2.outVertex();
+                if (inVertex1.id().equals(outVertex2.id()) && outVertex1.id().equals(inVertex2.id()))
+                {
+                    backrefCount++;
+                    break;
+                }
+            }
+        }
+        double backrefShare = (double) backrefCount * 2 / size;
+        smell.property(GraphBuilder.PROPERTY_BACKREF_SHARE, backrefShare);
+    }
+
+    public static void calcMEFS(Vertex smell, Set<Vertex> comps, List<Edge> edges)
+    {
+        MEFSCalculator mefsCalculator = new MEFSCalculator(comps,edges);
+        smell.property(GraphBuilder.PROPERTY_MEFS_SIZE, mefsCalculator.getMEFSSize());
+        smell.property(GraphBuilder.PROPERTY_REL_MEFS_SIZE, mefsCalculator.getRelativeMEFSSize());
+        smell.property(GraphBuilder.PROPERTY_MEFS, mefsCalculator.getEdgeFeedbackSet());
+        smell.property(GraphBuilder.PROPERTY_MEFS_SIZE_WO_TINYS, mefsCalculator.getMEFSSizeWOTinys());
+        smell.property(GraphBuilder.PROPERTY_REL_MEFS_SIZE_WO_TINYS, mefsCalculator.getRelativeMEFSSizeWOTinys());
+        smell.property(GraphBuilder.PROPERTY_MEFS_WO_TINYS, mefsCalculator.getEdgeFeedbackSetWOTinys());
+        smell.property(GraphBuilder.PROPERTY_REL_MEFS_SIZE_WO_TINYS_REDUCTION, mefsCalculator.getMEFSSizeWOTinysReduction());
+    }
+
+    public static void calcWeakStrongPackCycleMetrics(Vertex packCycleSmell)
+    {
+        Set<Vertex> allClassCycles = new HashSet<>();
+        Set<Vertex> multiPackClassCycles = new HashSet<>();
+        Iterator<Edge> packages = packCycleSmell.edges(Direction.OUT,GraphBuilder.LABEL_SUPERCYCLE_AFFECTED);
+
+        while (packages.hasNext())
+        {
+            Vertex packageVertex = packages.next().inVertex();
+            Iterator<Edge> classCycles =  packageVertex.edges(Direction.IN,GraphBuilder.LABEL_CLASS_CYCLE_IN_PACK);
+
+            while (classCycles.hasNext())
+            {
+                Vertex classCycle = classCycles.next().outVertex();
+                allClassCycles.add(classCycle);
+                if ((int)classCycle.value(GraphBuilder.PROPERTY_NUM_PACKAGES)>1)
+                {
+                    multiPackClassCycles.add(classCycle);
+                }
+            }
+        }
+        packCycleSmell.property(GraphBuilder.PROPERTY_NUM_CLASS_SUPERCYCLES,allClassCycles.size());
+        packCycleSmell.property(GraphBuilder.PROPERTY_NUM_STRONG_PACK_SUPERCYCLES ,multiPackClassCycles.size());
+    }
 }

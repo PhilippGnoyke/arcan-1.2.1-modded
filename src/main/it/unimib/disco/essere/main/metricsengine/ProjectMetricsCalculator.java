@@ -1,9 +1,11 @@
 package it.unimib.disco.essere.main.metricsengine;
 
+import it.unimib.disco.essere.main.asengine.alg.TarjansAlgorithm;
 import it.unimib.disco.essere.main.graphmanager.GraphBuilder;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
+import scala.reflect.internal.Trees;
 
 import java.util.*;
 
@@ -51,6 +53,22 @@ public class ProjectMetricsCalculator
     public final static String PROPERTY_PACK_CD_SHARE_ON_TD = "packageCDShareOnTD";
     public final static String PROPERTY_HD_SHARE_ON_TD = "HDShareOnTD";
     public final static String PROPERTY_UD_SHARE_ON_TD = "UDShareOnTD";
+
+    public final static String PROPERTY_TOTAL_ORDER_CLASS_CDS = "TotalOrderClassCds";
+    public final static String PROPERTY_TOTAL_ORDER_PACK_CDS = "TotalOrderPackCds";
+    public final static String PROPERTY_TOTAL_ORDER_HDS = "TotalOrderHds";
+    public final static String PROPERTY_TOTAL_ORDER_UDS = "TotalOrderUds";
+    public final static String PROPERTY_TOTAL_ORDER_OVERALL = "TotalOrderOverall";
+    public final static String PROPERTY_TOTAL_SIZE_CLASS_CDS = "TotalSizeClassCds";
+    public final static String PROPERTY_TOTAL_SIZE_PACK_CDS = "TotalSizePackCds";
+    public final static String PROPERTY_TOTAL_SIZE_HDS = "TotalSizeHds";
+    public final static String PROPERTY_TOTAL_SIZE_UDS = "TotalSizeUds";
+    public final static String PROPERTY_TOTAL_SIZE_OVERALL = "TotalSizeOverall";
+    public final static String PROPERTY_TOTAL_NUM_SUBCYCLES_CLASS_CDS = "TotalNumSubcyclesClassCds";
+    public final static String PROPERTY_TOTAL_NUM_SUBCYCLES_PACK_CDS = "TotalNumSubcyclesPackCds";
+    public final static String PROPERTY_TOTAL_NUM_SUBCYCLES_OVERALL = "TotalNumSubcyclesOverall";
+    public final static String PROPERTY_CLASS_SHARE_LARGEST_CLASS_CD = "ClassShareLargestClassCd";
+    public final static String PROPERTY_PACK_SHARE_LARGEST_PACK_CD = "PackShareLargestPackCd";
 
     // Aliases
     private final static String LBL_CD_AFFECTED = GraphBuilder.LABEL_SUPERCYCLE_AFFECTED;
@@ -114,6 +132,23 @@ public class ProjectMetricsCalculator
         calcAndPutRelSmellCounts(packCdCount, PROPERTY_PACK_CDS_PER_LOC, null, PROPERTY_PACK_CDS_PER_PACK);
         calcAndPutRelSmellCounts(hdCount, PROPERTY_HDS_PER_LOC, PROPERTY_HDS_PER_CLASS, null);
         calcAndPutRelSmellCounts(udCount, PROPERTY_UDS_PER_LOC, null, PROPERTY_UDS_PER_PACK);
+
+        int orderLargestClassCd = getOrderLargestCd(GraphBuilder.LBL_CLASS_DEP);
+        int orderLargestPackCd  = getOrderLargestCd(GraphBuilder.LBL_PACK_DEP);
+        put(PROPERTY_CLASS_SHARE_LARGEST_CLASS_CD, (double) orderLargestClassCd / classCdCount);
+        put(PROPERTY_PACK_SHARE_LARGEST_PACK_CD, (double) orderLargestPackCd / packCdCount);
+
+    }
+
+    private int getOrderLargestCd(String level)
+    {
+        List<Vertex> supercycles = GraphBuilder.isClassLevel(level)? classSupercycles : packSupercycles;
+        int largestOrder = 0;
+        for (Vertex smell : supercycles)
+        {
+            largestOrder = Math.max(largestOrder,smell.value(GraphBuilder.PROPERTY_ORDER));
+        }
+        return largestOrder;
     }
 
     private void calcAndPutRelSmellCounts(int dividend, String keyLoc, String keyClass, String keyPack)
@@ -232,6 +267,49 @@ public class ProjectMetricsCalculator
         }
     }
 
+    public void calculateSmellPropertyAggregates()
+    {
+        int totalOrderClassCds = calcTotal(classSupercycles, GraphBuilder.PROPERTY_ORDER);
+        int totalOrderPackCds = calcTotal(packSupercycles, GraphBuilder.PROPERTY_ORDER);
+        int totalOrderHds = calcTotal(hds, GraphBuilder.PROPERTY_ORDER);
+        int totalOrderUds = calcTotal(uds, GraphBuilder.PROPERTY_ORDER);
+        int totalOrderOverall = totalOrderClassCds + totalOrderPackCds + totalOrderHds + totalOrderUds;
+
+        int totalSizeClassCds = calcTotal(classSupercycles, GraphBuilder.PROPERTY_SIZE);
+        int totalSizePackCds = calcTotal(packSupercycles, GraphBuilder.PROPERTY_SIZE);
+        int totalSizeHds = calcTotal(hds, GraphBuilder.PROPERTY_SIZE);
+        int totalSizeUds = calcTotal(uds, GraphBuilder.PROPERTY_SIZE);
+        int totalSizeOverall = totalSizeClassCds + totalSizePackCds + totalSizeHds + totalSizeUds;
+
+        int totalNumSubcyclesClassCds = calcTotal(classSupercycles,GraphBuilder.PROPERTY_NUM_SUBCYCLES);
+        int totalNumSubcyclesPackCds = calcTotal(packSupercycles,GraphBuilder.PROPERTY_NUM_SUBCYCLES);
+        int totalNumSubcyclesOverall = totalNumSubcyclesClassCds + totalNumSubcyclesPackCds;
+
+        put(PROPERTY_TOTAL_ORDER_CLASS_CDS, totalOrderClassCds);
+        put(PROPERTY_TOTAL_ORDER_PACK_CDS, totalOrderPackCds);
+        put(PROPERTY_TOTAL_ORDER_HDS, totalOrderHds);
+        put(PROPERTY_TOTAL_ORDER_UDS, totalOrderUds);
+        put(PROPERTY_TOTAL_ORDER_OVERALL, totalOrderOverall);
+        put(PROPERTY_TOTAL_SIZE_CLASS_CDS, totalSizeClassCds);
+        put(PROPERTY_TOTAL_SIZE_PACK_CDS, totalSizePackCds);
+        put(PROPERTY_TOTAL_SIZE_HDS, totalSizeHds);
+        put(PROPERTY_TOTAL_SIZE_UDS, totalSizeUds);
+        put(PROPERTY_TOTAL_SIZE_OVERALL, totalSizeOverall);
+        put(PROPERTY_TOTAL_NUM_SUBCYCLES_CLASS_CDS, totalNumSubcyclesClassCds);
+        put(PROPERTY_TOTAL_NUM_SUBCYCLES_PACK_CDS, totalNumSubcyclesPackCds);
+        put(PROPERTY_TOTAL_NUM_SUBCYCLES_OVERALL, totalNumSubcyclesOverall);
+    }
+
+    public int calcTotal(List<Vertex> smells, String property)
+    {
+        int total = 0;
+        for(Vertex smell : smells)
+        {
+            total += (int) smell.value(property);
+        }
+        return total;
+    }
+    
     public void calculateProjectTdMetrics()
     {
         double classCdTd = sumUpTd(classSupercycles);

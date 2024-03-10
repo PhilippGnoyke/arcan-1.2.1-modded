@@ -148,13 +148,13 @@ public class TdSmellCalculator
         {
             for (Vertex supercycle : supercycles)
             {
-                Iterator<Edge> edges = supercycle.edges(Direction.OUT, GraphBuilder.LABEL_SUB_OF_SUPERCYCLE);
+                Iterator<Edge> edges = supercycle.edges(Direction.IN, GraphBuilder.LABEL_SUB_OF_SUPERCYCLE);
                 double prMax = 0;
                 double tdi = 0;
                 double sevScore = 0;
                 while (edges.hasNext())
                 {
-                    Vertex subcycle = edges.next().inVertex();
+                    Vertex subcycle = edges.next().outVertex();
                     double pr = subcycle.value(GraphBuilder.PROPERTY_CENTRALITY);
                     tdi += (double) subcycle.value(GraphBuilder.PROPERTY_TDI);
                     sevScore += (double) subcycle.value(GraphBuilder.PROPERTY_SEVERITY_SCORE);

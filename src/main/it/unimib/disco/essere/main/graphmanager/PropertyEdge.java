@@ -5,7 +5,8 @@ public enum PropertyEdge {
 	LABEL_CLASS_DEPENDENCY("dependsOn"),
 	LABEL_SUPER_DEPENDENCY("isChildOf"),
 	LABEL_INTERFACE_DEPENDENCY("isImplementationOf"),
-	LABEL_EFFERENCE("isEfferentOf");
+	LABEL_EFFERENCE("isEfferentOf"),
+	LABEL_BACKREF("backref"); //Modded
 	//edge labels
 	private final String _property;
 	/**

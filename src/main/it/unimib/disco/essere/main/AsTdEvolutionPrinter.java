@@ -1,8 +1,5 @@
 package it.unimib.disco.essere.main;
 
-import it.unimib.disco.essere.main.asengine.HubLikeDetector;
-import it.unimib.disco.essere.main.asengine.SuperCycleDetector;
-import it.unimib.disco.essere.main.asengine.UnstableDependencyDetector;
 import it.unimib.disco.essere.main.graphmanager.GraphBuilder;
 import it.unimib.disco.essere.main.graphmanager.GraphUtils;
 import it.unimib.disco.essere.main.metricsengine.ProjectMetricsCalculator;
@@ -31,6 +28,10 @@ public class AsTdEvolutionPrinter
     public static final String FILE_UDS_COMPS = "UDsComponents.csv";
     public static final String FOLDER_INTRA_VERSION_CLASS_CD_EDGES = "classCDEdges";
     public static final String FOLDER_INTRA_VERSION_PACK_CD_EDGES = "packageCDEdges";
+    public static final String FILE_INTRA_VERSION_CLASS_CD_MEFS = "classCDmEFS.csv";
+    public static final String FILE_INTRA_VERSION_PACK_CD_MEFS = "packageCDmEFS.csv";
+    public static final String FILE_INTRA_VERSION_CLASS_CD_MEFS_WO_TINYS = "classCDmEFSWOTinys.csv";
+    public static final String FILE_INTRA_VERSION_PACK_CD_MEFS_WO_TINYS = "packageCDmEFSWOTinys.csv";
 
     public static final String ID = "id";
     public static final String AFFECTED_COMPS = "affectedComponents";
@@ -42,6 +43,7 @@ public class AsTdEvolutionPrinter
     public static final String DEP_EDGE_OUT = "dependency edge outgoing from";
     public static final String DEP_EDGE_IN = "dependency edge incoming to...";
 
+    public static final String VERTICES_MEFS = "edges in minimum edge feedback set";
 
     public static final String DELIMITER = ",";
 
@@ -125,7 +127,22 @@ public class AsTdEvolutionPrinter
         ProjectMetricsCalculator.PROPERTY_AS_AFFECTED_CLASSES_DEGREE,
         ProjectMetricsCalculator.PROPERTY_AS_AFFECTED_PACKS_DEGREE,
         ProjectMetricsCalculator.PROPERTY_AS_MULTI_AFFECTED_CLASSES_DEGREE,
-        ProjectMetricsCalculator.PROPERTY_AS_MULTI_AFFECTED_PACKS_DEGREE
+        ProjectMetricsCalculator.PROPERTY_AS_MULTI_AFFECTED_PACKS_DEGREE,
+        ProjectMetricsCalculator.PROPERTY_TOTAL_ORDER_CLASS_CDS,
+        ProjectMetricsCalculator.PROPERTY_TOTAL_ORDER_PACK_CDS,
+        ProjectMetricsCalculator.PROPERTY_TOTAL_ORDER_HDS,
+        ProjectMetricsCalculator.PROPERTY_TOTAL_ORDER_UDS,
+        ProjectMetricsCalculator.PROPERTY_TOTAL_ORDER_OVERALL,
+        ProjectMetricsCalculator.PROPERTY_TOTAL_SIZE_CLASS_CDS,
+        ProjectMetricsCalculator.PROPERTY_TOTAL_SIZE_PACK_CDS,
+        ProjectMetricsCalculator.PROPERTY_TOTAL_SIZE_HDS,
+        ProjectMetricsCalculator.PROPERTY_TOTAL_SIZE_UDS,
+        ProjectMetricsCalculator.PROPERTY_TOTAL_SIZE_OVERALL,
+        ProjectMetricsCalculator.PROPERTY_TOTAL_NUM_SUBCYCLES_CLASS_CDS,
+        ProjectMetricsCalculator.PROPERTY_TOTAL_NUM_SUBCYCLES_PACK_CDS,
+        ProjectMetricsCalculator.PROPERTY_TOTAL_NUM_SUBCYCLES_OVERALL,
+        ProjectMetricsCalculator.PROPERTY_CLASS_SHARE_LARGEST_CLASS_CD,
+        ProjectMetricsCalculator.PROPERTY_PACK_SHARE_LARGEST_PACK_CD
     };
 
     private final static String[] generalSmellPropHeaders = new String[]{
@@ -137,6 +154,8 @@ public class AsTdEvolutionPrinter
         GraphBuilder.PROPERTY_CENTRALITY,
         GraphBuilder.PROPERTY_TDI,
         GraphBuilder.PROPERTY_OVERLAP_RATIO,
+        GraphBuilder.PROPERTY_BACKREF_SHARE,
+        GraphBuilder.PROPERTY_SHARE_PACKAGES,
     };
 
     public final static String[] classCdPropHeaders = mergeStringArrays(
@@ -144,20 +163,38 @@ public class AsTdEvolutionPrinter
             GraphBuilder.PROPERTY_SHAPE,
             GraphBuilder.PROPERTY_NUM_SUBCYCLES,
             GraphBuilder.PROPERTY_NUM_INHERIT_EDGES,
-            GraphBuilder.PROPERTY_REL_NUM_INHERIT_EDGES
+            GraphBuilder.PROPERTY_REL_NUM_INHERIT_EDGES,
+            GraphBuilder.PROPERTY_MEFS_SIZE,
+            GraphBuilder.PROPERTY_REL_MEFS_SIZE,
+            GraphBuilder.PROPERTY_MEFS_SIZE_WO_TINYS,
+            GraphBuilder.PROPERTY_REL_MEFS_SIZE_WO_TINYS,
+            GraphBuilder.PROPERTY_REL_MEFS_SIZE_WO_TINYS_REDUCTION,
+            GraphBuilder.PROPERTY_NUM_PACKAGES,
+            GraphBuilder.PROPERTY_SHARE_CLASSES,
+            GraphBuilder.PROPERTY_DENSITY
         });
 
     public final static String[] packCdPropHeaders = mergeStringArrays(
         generalSmellPropHeaders, new String[]{
             GraphBuilder.PROPERTY_SHAPE,
             GraphBuilder.PROPERTY_NUM_SUBCYCLES,
+            GraphBuilder.PROPERTY_MEFS_SIZE,
+            GraphBuilder.PROPERTY_REL_MEFS_SIZE,
+            GraphBuilder.PROPERTY_MEFS_SIZE_WO_TINYS,
+            GraphBuilder.PROPERTY_REL_MEFS_SIZE_WO_TINYS,
+            GraphBuilder.PROPERTY_REL_MEFS_SIZE_WO_TINYS_REDUCTION,
+            GraphBuilder.PROPERTY_NUM_CLASS_SUPERCYCLES,
+            GraphBuilder.PROPERTY_NUM_STRONG_PACK_SUPERCYCLES,
+            GraphBuilder.PROPERTY_DENSITY
         });
 
     public final static String[] hdPropHeaders = mergeStringArrays(
         generalSmellPropHeaders, new String[]{
             GraphBuilder.PROPERTY_HL_FAN_IN,
             GraphBuilder.PROPERTY_HL_FAN_OUT,
-            GraphBuilder.PROPERTY_HUB_RATIO
+            GraphBuilder.PROPERTY_HUB_RATIO,
+            GraphBuilder.PROPERTY_NUM_PACKAGES,
+            GraphBuilder.PROPERTY_SHARE_CLASSES,
         });
 
     public final static String[] udPropHeaders = mergeStringArrays(
@@ -165,8 +202,13 @@ public class AsTdEvolutionPrinter
             GraphBuilder.PROPERTY_DOUD,
             GraphBuilder.PROPERTY_INSTABILITY_GAP_1ST_QUARTILE,
             GraphBuilder.PROPERTY_INSTABILITY_GAP_2ND_QUARTILE,
-            GraphBuilder.PROPERTY_INSTABILITY_GAP_3RD_QUARTILE
+            GraphBuilder.PROPERTY_INSTABILITY_GAP_3RD_QUARTILE,
         });
+
+    public final static String[] cdMEFSHeaders = new String[]{
+        ID,
+        VERTICES_MEFS
+    };
 
     public final static String[] cdEdgeHeaders = new String[]{
         DEP_EDGE_OUT,
@@ -206,6 +248,9 @@ public class AsTdEvolutionPrinter
             File file = outputDirUtils.getFileInSubOutputFolder(FOLDER_INTRA_VERSION_CLASS_CD_EDGES, smell.id().toString() + ".csv");
             printCore(file, cdEdgeHeaders, new CdEdgesPrinter(GraphBuilder.CLASS, smell));
         }
+        printCore(FILE_INTRA_VERSION_CLASS_CD_MEFS, cdMEFSHeaders, new MEFSPrinter(GraphBuilder.CLASS,false));
+        printCore(FILE_INTRA_VERSION_CLASS_CD_MEFS_WO_TINYS, cdMEFSHeaders, new MEFSPrinter(GraphBuilder.CLASS,true));
+
     }
 
     public void printPackCds() throws IOException, NullPointerException
@@ -218,6 +263,8 @@ public class AsTdEvolutionPrinter
             File file = outputDirUtils.getFileInSubOutputFolder(FOLDER_INTRA_VERSION_PACK_CD_EDGES, smell.id().toString() + ".csv");
             printCore(file, cdEdgeHeaders, new CdEdgesPrinter(GraphBuilder.PACKAGE, smell));
         }
+        printCore(FILE_INTRA_VERSION_PACK_CD_MEFS, cdMEFSHeaders, new MEFSPrinter(GraphBuilder.PACKAGE,false));
+        printCore(FILE_INTRA_VERSION_PACK_CD_MEFS_WO_TINYS, cdMEFSHeaders, new MEFSPrinter(GraphBuilder.PACKAGE,true));
     }
 
     public void printHds() throws IOException, NullPointerException
@@ -292,6 +339,24 @@ public class AsTdEvolutionPrinter
         }
     }
 
+    private class MEFSPrinter implements PrinterCore
+    {
+        private final String level;
+        private final boolean woTinys;
+
+        public MEFSPrinter(String level, boolean woTinys)
+        {
+            this.level = level;
+            this.woTinys = woTinys;
+        }
+
+        public void print(String[] headers, CSVPrinter printer) throws IOException
+        {
+            printmEFSCore(printer, level.equals(GraphBuilder.CLASS) ? classSupercycles : packSupercycles,woTinys);
+        }
+    }
+
+
     private class CdEdgesPrinter implements PrinterCore
     {
         private final String level;
@@ -305,7 +370,7 @@ public class AsTdEvolutionPrinter
 
         public void print(String[] headers, CSVPrinter printer) throws IOException
         {
-            String depLabel = level.equals(GraphBuilder.CLASS) ? SuperCycleDetector.LBL_CLASS_DEP : SuperCycleDetector.LBL_PACK_DEP;
+            String depLabel = level.equals(GraphBuilder.CLASS) ? GraphBuilder.LBL_CLASS_DEP : GraphBuilder.LBL_PACK_DEP;
             printCdEdgesCore(printer, smell, depLabel);
         }
     }
@@ -429,6 +494,26 @@ public class AsTdEvolutionPrinter
                 printer.print(edgeMatrix[i][j] ? 1 : 0);
             }
             printer.println();
+        }
+    }
+
+    private static void printmEFSCore(CSVPrinter printer, List<Vertex> smells, boolean woTinys) throws IOException
+    {
+        for (Vertex smell : smells)
+        {
+            Set<Edge> edges = (Set<Edge>) smell.value(woTinys? GraphBuilder.PROPERTY_MEFS_WO_TINYS : GraphBuilder.PROPERTY_MEFS);
+            if (edges.size()>0)
+            {
+                printer.print(smell.id());
+                for (Edge edge : edges)
+                {
+                    String outVertexName = edge.outVertex().value(GraphBuilder.PROPERTY_NAME);
+                    String inVertexName = edge.inVertex().value(GraphBuilder.PROPERTY_NAME);
+
+                    printer.print(outVertexName + "->" + inVertexName);
+                }
+                printer.println();
+            }
         }
     }
 }
