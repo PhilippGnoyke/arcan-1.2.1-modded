@@ -43,7 +43,7 @@ public class AsTdEvolutionPrinter
     public static final String DEP_EDGE_OUT = "dependency edge outgoing from";
     public static final String DEP_EDGE_IN = "dependency edge incoming to...";
 
-    public static final String VERTICES_MEFS = "edges in minimum edge feedback set";
+    public static final String EDGES = "edges";
 
     public static final String DELIMITER = ",";
 
@@ -207,7 +207,7 @@ public class AsTdEvolutionPrinter
 
     public final static String[] cdMEFSHeaders = new String[]{
         ID,
-        VERTICES_MEFS
+        EDGES
     };
 
     public final static String[] cdEdgeHeaders = new String[]{
