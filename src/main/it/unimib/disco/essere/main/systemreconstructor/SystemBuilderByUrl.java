@@ -7,7 +7,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.stream.Stream;
 
-import org.apache.bcel.Repository;
+import it.unimib.disco.essere.main.ExTimeLogger;
+import it.unimib.disco.essere.main.graphmanager.ClassFilter;
+import org.apache.bcel.util.Repository;
 import org.apache.bcel.classfile.ClassParser;
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.commons.io.FilenameUtils;
@@ -22,6 +24,10 @@ public class SystemBuilderByUrl extends SystemBuilder {
 
     public SystemBuilderByUrl() {
         super();
+    }
+
+    public SystemBuilderByUrl(ClassFilter classFilter, ExTimeLogger exTimeLogger, Repository repo) {
+        super(classFilter,exTimeLogger, repo);
     }
 
     @Override
@@ -45,9 +51,18 @@ public class SystemBuilderByUrl extends SystemBuilder {
                                 ClassParser cParser = new ClassParser(inputStream, filePath.getFileName().toString());
                                 try {
                                     JavaClass clazz = cParser.parse();
-                                    Repository.addClass(clazz);
-                                    this.getClasses().add(clazz);
-                                    this.getPackages().add(GraphUtils.getPackageName(clazz.getClassName()));
+                                    String className = clazz.getClassName();  //Modded
+                                    if (classFilter==null || classFilter.isSharedClass(className)) //Modded
+                                    {
+                                        repo.storeClass(clazz);
+                                        this.getClasses().add(clazz);
+                                        this.getPackages().add(GraphUtils.getPackageName(className));
+                                    }
+                                    else if(classFilter!=null && !classFilter.isSharedClass(className))
+                                    {
+                                        this.getExtClasses().add(clazz.getClassName());
+                                        this.getExtPackages().add(GraphUtils.getPackageName(className));
+                                    }
                                 } catch (Exception e) {
                                     logger.debug(e.getMessage());;
                                 }

@@ -22,10 +22,10 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.jgrapht:jgrapht-core:0.9.2"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: junit:junit:4.12"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.hamcrest:hamcrest-core:1.3"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.apache.logging.log4j:log4j-core:2.7"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.apache.logging.log4j:log4j-web:2.7"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.apache.logging.log4j:log4j-api:2.7"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.apache.logging.log4j:log4j-slf4j-impl:2.7"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.apache.logging.log4j:log4j-core:2.17.1"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.apache.logging.log4j:log4j-web:2.17.1"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.apache.logging.log4j:log4j-api:2.17.1"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.apache.logging.log4j:log4j-slf4j-impl:2.17.1"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.slf4j:slf4j-api:1.7.21"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.neo4j:neo4j-tinkerpop-api-impl:0.3-2.3.2"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.neo4j:neo4j-tinkerpop-api:0.1"/>
@@ -95,7 +95,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.mindrot:jbcrypt:0.3m"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.apache.commons:commons-csv:1.4"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.apache.tinkerpop:tinkergraph-gremlin:3.1.1-incubating"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.apache.bcel:bcel:6.0-RC3"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: commons-io:commons-io:2.2"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: com.beust:jcommander:1.60"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.eclipse.jgit:org.eclipse.jgit:4.3.0.201604071810-r"/>
@@ -170,7 +169,7 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.codehaus.plexus:plexus-utils:3.0.20"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.codehaus.plexus:plexus-component-annotations:1.6"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.apache.maven:maven-model:3.3.9"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.apache.commons:commons-lang3:3.4"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.apache.commons:commons-lang3:14.0"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.eclipse.scout.sdk.deps:org.eclipse.m2e.core:1.7.0.20160603-1933"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.eclipse.scout.sdk.deps:org.eclipse.osgi:3.11.0.v20160603-1336"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.eclipse.scout.sdk.deps:org.eclipse.core.runtime:3.12.0.v20160606-1342"/>
@@ -203,5 +202,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: net.java.dev.jna:jna-platform:4.2.2"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.glassfish:javax.json:1.0.4"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Maven: org.jetbrains:annotations:20.1.0"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/org.apache.bcel:bcel:6.9.0"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

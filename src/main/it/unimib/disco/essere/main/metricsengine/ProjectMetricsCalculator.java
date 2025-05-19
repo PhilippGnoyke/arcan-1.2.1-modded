@@ -1,11 +1,11 @@
 package it.unimib.disco.essere.main.metricsengine;
 
-import it.unimib.disco.essere.main.asengine.alg.TarjansAlgorithm;
+import it.unimib.disco.essere.main.ETLE;
+import it.unimib.disco.essere.main.ExTimeLogger;
 import it.unimib.disco.essere.main.graphmanager.GraphBuilder;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
-import scala.reflect.internal.Trees;
 
 import java.util.*;
 
@@ -13,8 +13,16 @@ import java.util.*;
 public class ProjectMetricsCalculator
 {
     public final static String PROPERTY_LOC = "LOC";
-    public final static String PROPERTY_CLASS_COUNT = "classCount";
-    public final static String PROPERTY_PACK_COUNT = "packageCount";
+    public final static String PROPERTY_TOTAL_CLASS_COUNT = "totalClassCount";
+    public final static String PROPERTY_TOTAL_PACK_COUNT = "totalPackageCount";
+    public final static String PROPERTY_INT_CLASS_COUNT = "internalClassCount";
+    public final static String PROPERTY_INT_PACK_COUNT = "internalPackageCount";
+    public final static String PROPERTY_EXT_CLASS_COUNT = "externalClassCount";
+    public final static String PROPERTY_EXT_PACK_COUNT = "externalPackageCount";
+    public final static String PROPERTY_INT_CLASS_DEP_COUNT = "internalClassDependencyCount";
+    public final static String PROPERTY_INT_PACK_DEP_COUNT = "internalPackageDependencyCount";
+    public final static String PROPERTY_TOTAL_CLASS_DEP_COUNT = "totalClassDependencyCount";
+    public final static String PROPERTY_TOTAL_PACK_DEP_COUNT = "totalPackageDependencyCount";
 
     public final static String PROPERTY_SUPERCYCLE_CLASS_CD_COUNT = "classCDCount"; //see CDs
     public final static String PROPERTY_SUPERCYCLE_PACK_CD_COUNT = "packageCDCount"; //see CDs
@@ -84,16 +92,44 @@ public class ProjectMetricsCalculator
     private List<Vertex> packSupercycles;
     private List<Vertex> hds;
     private List<Vertex> uds;
+    private ExTimeLogger exTimeLogger;
+    private long totalClassCount;
+    private long totalPackCount;
+    private long intClassCount;
+    private long intPackCount;
+    private Set<String> extClasses;
+    private Set<String> extPackages;
 
-    public ProjectMetricsCalculator(int classCount, int packCount, List<Vertex> classSupercycles,
-                                    List<Vertex> packSupercycles, List<Vertex> hds, List<Vertex> uds)
+
+    public ProjectMetricsCalculator(long totalClassCount, long totalPackCount, long extClassCount, long extPackCount,
+                                    List<Vertex> classSupercycles, List<Vertex> packSupercycles,
+                                    List<Vertex> hds, List<Vertex> uds, Set<String> extClasses, Set<String> extPackages,
+                                    long intClassDependencyCount, long intPackageDependencyCount,
+                                    long totalClassDependencyCount, long totalPackageDependencyCount, ExTimeLogger exTimeLogger)
     {
-        projectProps.put(PROPERTY_CLASS_COUNT, classCount);
-        projectProps.put(PROPERTY_PACK_COUNT, packCount);
+        this.totalClassCount = totalClassCount;
+        this.totalPackCount = totalPackCount;
+        this.intClassCount = totalClassCount - extClassCount;
+        this.intPackCount = totalPackCount - extPackCount;
+        this.extClasses = extClasses;
+        this.extPackages = extPackages;
+
+        projectProps.put(PROPERTY_TOTAL_CLASS_COUNT, totalClassCount);
+        projectProps.put(PROPERTY_TOTAL_PACK_COUNT, totalPackCount);
+        projectProps.put(PROPERTY_INT_CLASS_COUNT, intClassCount);
+        projectProps.put(PROPERTY_INT_PACK_COUNT, intPackCount);
+        projectProps.put(PROPERTY_EXT_CLASS_COUNT, extClassCount);
+        projectProps.put(PROPERTY_EXT_PACK_COUNT, extPackCount);
         this.classSupercycles = classSupercycles;
         this.packSupercycles = packSupercycles;
         this.hds = hds;
         this.uds = uds;
+        projectProps.put(PROPERTY_INT_CLASS_DEP_COUNT, intClassDependencyCount);
+        projectProps.put(PROPERTY_INT_PACK_DEP_COUNT, intPackageDependencyCount);
+        projectProps.put(PROPERTY_TOTAL_CLASS_DEP_COUNT, totalClassDependencyCount);
+        projectProps.put(PROPERTY_TOTAL_PACK_DEP_COUNT, totalPackageDependencyCount);
+
+        this.exTimeLogger = exTimeLogger;
     }
 
     public Object get(String key)
@@ -111,8 +147,10 @@ public class ProjectMetricsCalculator
         return (int) get(PROPERTY_AS_AFFECTED_CLASSES_COUNT) + (int) get(PROPERTY_AS_AFFECTED_PACKS_COUNT);
     }
 
-    public void updateAsCounts(int loc)
+    public void updateAsCounts(long loc)
     {
+        exTimeLogger.logEventStart(ETLE.Event.UPDATE_AS_COUNTS);
+
         put(PROPERTY_LOC, loc);
 
         int classCdCount = classSupercycles.size();
@@ -134,64 +172,70 @@ public class ProjectMetricsCalculator
         calcAndPutRelSmellCounts(udCount, PROPERTY_UDS_PER_LOC, null, PROPERTY_UDS_PER_PACK);
 
         int orderLargestClassCd = getOrderLargestCd(GraphBuilder.LBL_CLASS_DEP);
-        int orderLargestPackCd  = getOrderLargestCd(GraphBuilder.LBL_PACK_DEP);
-        put(PROPERTY_CLASS_SHARE_LARGEST_CLASS_CD, (double) orderLargestClassCd / classCdCount);
-        put(PROPERTY_PACK_SHARE_LARGEST_PACK_CD, (double) orderLargestPackCd / packCdCount);
+        int orderLargestPackCd = getOrderLargestCd(GraphBuilder.LBL_PACK_DEP);
+        put(PROPERTY_CLASS_SHARE_LARGEST_CLASS_CD, (double) orderLargestClassCd / intClassCount);
+        put(PROPERTY_PACK_SHARE_LARGEST_PACK_CD, (double) orderLargestPackCd / intPackCount);
 
+        exTimeLogger.logEventEnd(ETLE.Event.UPDATE_AS_COUNTS);
     }
 
     private int getOrderLargestCd(String level)
     {
-        List<Vertex> supercycles = GraphBuilder.isClassLevel(level)? classSupercycles : packSupercycles;
+        List<Vertex> supercycles = GraphBuilder.isClassLevel(level) ? classSupercycles : packSupercycles;
         int largestOrder = 0;
         for (Vertex smell : supercycles)
         {
-            largestOrder = Math.max(largestOrder,smell.value(GraphBuilder.PROPERTY_ORDER));
+            largestOrder = Math.max(largestOrder, smell.value(GraphBuilder.PROPERTY_ORDER));
         }
         return largestOrder;
     }
 
     private void calcAndPutRelSmellCounts(int dividend, String keyLoc, String keyClass, String keyPack)
     {
-        put(keyLoc, (double) dividend / (int) get(PROPERTY_LOC));
+        put(keyLoc, (double) dividend / (long) get(PROPERTY_LOC));
         if (keyClass != null)
         {
-            put(keyClass, (double) dividend / (int) get(PROPERTY_CLASS_COUNT));
+            put(keyClass, (double) dividend / intClassCount);
         }
         if (keyPack != null)
         {
-            put(keyPack, (double) dividend / (int) get(PROPERTY_PACK_COUNT));
+            put(keyPack, (double) dividend / intPackCount);
         }
     }
 
     public void calcProjAsAffectedCompsAndOverlapRatios()
     {
+        exTimeLogger.logEventStart(ETLE.Event.AS_AFFECTED_COUNTS_CALC);
         Set<Vertex> affectedClasses = new HashSet<>();
         Set<Vertex> affectedPacks = new HashSet<>();
         Set<Vertex> multiAffectedClasses = new HashSet<>();
         Set<Vertex> multiAffectedPacks = new HashSet<>();
 
-        addVerticesToSetCore(affectedClasses, multiAffectedClasses, classSupercycles, LBL_CD_AFFECTED);
-        addVerticesToSetCore(affectedPacks, multiAffectedPacks, packSupercycles, LBL_CD_AFFECTED);
-        addVerticesToSetCore(affectedClasses, multiAffectedClasses, hds, LBL_HD_AFFECTED_1, LBL_HD_AFFECTED_2, LBL_HD_AFFECTED_3);
-        addVerticesToSetCore(affectedPacks, multiAffectedPacks, uds, LBL_UD_AFFECTED_1, LBL_UD_AFFECTED_2);
+        addVerticesToSetCore(affectedClasses, multiAffectedClasses, classSupercycles, extClasses, LBL_CD_AFFECTED);
+        addVerticesToSetCore(affectedPacks, multiAffectedPacks, packSupercycles, extPackages, LBL_CD_AFFECTED);
+        addVerticesToSetCore(affectedClasses, multiAffectedClasses, hds, extClasses, LBL_HD_AFFECTED_1, LBL_HD_AFFECTED_2, LBL_HD_AFFECTED_3);
+        addVerticesToSetCore(affectedPacks, multiAffectedPacks, uds, extPackages, LBL_UD_AFFECTED_1, LBL_UD_AFFECTED_2);
 
         put(PROPERTY_AS_AFFECTED_CLASSES_COUNT, affectedClasses.size());
         put(PROPERTY_AS_AFFECTED_PACKS_COUNT, affectedPacks.size());
         put(PROPERTY_AS_MULTI_AFFECTED_CLASSES_COUNT, multiAffectedClasses.size());
         put(PROPERTY_AS_MULTI_AFFECTED_PACKS_COUNT, multiAffectedPacks.size());
 
-        int classCount = (int) get(PROPERTY_CLASS_COUNT);
-        int packCount = (int) get(PROPERTY_PACK_COUNT);
-        put(PROPERTY_AS_AFFECTED_CLASSES_DEGREE, (double) affectedClasses.size() / classCount);
-        put(PROPERTY_AS_AFFECTED_PACKS_DEGREE, (double) affectedPacks.size() / packCount);
-        put(PROPERTY_AS_MULTI_AFFECTED_CLASSES_DEGREE, (double) multiAffectedClasses.size() / classCount);
-        put(PROPERTY_AS_MULTI_AFFECTED_PACKS_DEGREE, (double) multiAffectedPacks.size() / packCount);
+        put(PROPERTY_AS_AFFECTED_CLASSES_DEGREE, (double) affectedClasses.size() / intClassCount);
+        put(PROPERTY_AS_AFFECTED_PACKS_DEGREE, (double) affectedPacks.size() / intPackCount);
+        put(PROPERTY_AS_MULTI_AFFECTED_CLASSES_DEGREE, (double) multiAffectedClasses.size() / intClassCount);
+        put(PROPERTY_AS_MULTI_AFFECTED_PACKS_DEGREE, (double) multiAffectedPacks.size() / intPackCount);
+
+        exTimeLogger.logEventEnd(ETLE.Event.AS_AFFECTED_COUNTS_CALC);
+        exTimeLogger.logEventStart(ETLE.Event.OVERLAP_DETER);
 
         calculateOverlapRatiosSimple(classSupercycles, multiAffectedClasses, LBL_CD_AFFECTED);
         calculateOverlapRatiosSimple(packSupercycles, multiAffectedPacks, LBL_CD_AFFECTED);
         calculateOverlapRatiosRedundantEdges(hds, multiAffectedClasses, LBL_HD_AFFECTED_1, LBL_HD_AFFECTED_2, LBL_HD_AFFECTED_3);
         calculateOverlapRatiosSimple(uds, multiAffectedPacks, LBL_UD_AFFECTED_1, LBL_UD_AFFECTED_2);
+
+        exTimeLogger.logEventEnd(ETLE.Event.OVERLAP_DETER);
+
     }
 
     private void calculateOverlapRatiosSimple(List<Vertex> smells, Set<Vertex> multiAffectedComps, String... labels)
@@ -244,7 +288,7 @@ public class ProjectMetricsCalculator
     }
 
     private void addVerticesToSetCore
-        (Set<Vertex> affected, Set<Vertex> multiAffected, List<Vertex> smells, String... labels)
+        (Set<Vertex> affected, Set<Vertex> multiAffected, List<Vertex> smells, Set<String> exts, String... labels)
     {
         if (smells != null)
         {
@@ -254,13 +298,16 @@ public class ProjectMetricsCalculator
                 while (edges.hasNext())
                 {
                     Vertex vertex = edges.next().inVertex();
-                    if (!affected.contains(vertex))
+                    if (!exts.contains(vertex.value(GraphBuilder.PROPERTY_NAME).toString()))
                     {
-                        affected.add(vertex);
-                    }
-                    else
-                    {
-                        multiAffected.add(vertex);
+                        if (!affected.contains(vertex))
+                        {
+                            affected.add(vertex);
+                        }
+                        else
+                        {
+                            multiAffected.add(vertex);
+                        }
                     }
                 }
             }
@@ -281,8 +328,8 @@ public class ProjectMetricsCalculator
         int totalSizeUds = calcTotal(uds, GraphBuilder.PROPERTY_SIZE);
         int totalSizeOverall = totalSizeClassCds + totalSizePackCds + totalSizeHds + totalSizeUds;
 
-        int totalNumSubcyclesClassCds = calcTotal(classSupercycles,GraphBuilder.PROPERTY_NUM_SUBCYCLES);
-        int totalNumSubcyclesPackCds = calcTotal(packSupercycles,GraphBuilder.PROPERTY_NUM_SUBCYCLES);
+        int totalNumSubcyclesClassCds = calcTotal(classSupercycles, GraphBuilder.PROPERTY_NUM_SUBCYCLES);
+        int totalNumSubcyclesPackCds = calcTotal(packSupercycles, GraphBuilder.PROPERTY_NUM_SUBCYCLES);
         int totalNumSubcyclesOverall = totalNumSubcyclesClassCds + totalNumSubcyclesPackCds;
 
         put(PROPERTY_TOTAL_ORDER_CLASS_CDS, totalOrderClassCds);
@@ -303,13 +350,13 @@ public class ProjectMetricsCalculator
     public int calcTotal(List<Vertex> smells, String property)
     {
         int total = 0;
-        for(Vertex smell : smells)
+        for (Vertex smell : smells)
         {
             total += (int) smell.value(property);
         }
         return total;
     }
-    
+
     public void calculateProjectTdMetrics()
     {
         double classCdTd = sumUpTd(classSupercycles);
@@ -319,9 +366,9 @@ public class ProjectMetricsCalculator
 
         double totalTd = classCdTd + packCdTd + hdTd + udTd;
         put(PROPERTY_TD_AMOUNT, totalTd);
-        put(PROPERTY_TD_PER_LOC, totalTd / (int) get(PROPERTY_LOC));
-        put(PROPERTY_TD_PER_CLASS, totalTd / (int) get(PROPERTY_CLASS_COUNT));
-        put(PROPERTY_TD_PER_PACK, totalTd / (int) get(PROPERTY_PACK_COUNT));
+        put(PROPERTY_TD_PER_LOC, totalTd / (long) get(PROPERTY_LOC));
+        put(PROPERTY_TD_PER_CLASS, totalTd / intClassCount);
+        put(PROPERTY_TD_PER_PACK, totalTd / intPackCount);
         put(PROPERTY_CLASS_CD_SHARE_ON_TD, classCdTd / totalTd);
         put(PROPERTY_PACK_CD_SHARE_ON_TD, packCdTd / totalTd);
         put(PROPERTY_HD_SHARE_ON_TD, hdTd / totalTd);

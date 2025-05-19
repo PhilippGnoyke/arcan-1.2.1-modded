@@ -8,10 +8,15 @@ import java.util.*;
 import java.util.Map.Entry;
 
 import it.unimib.disco.essere.main.asengine.SuperCycleDetector;
+import it.unimib.disco.essere.main.graphmanager.*;
 import it.unimib.disco.essere.main.metricsengine.*;
 import it.unimib.disco.essere.main.tdengine.PageRankCalculator;
 import it.unimib.disco.essere.main.tdengine.TdSmellCalculator;
+import it.unimib.disco.essere.main.graphmanager.EdgeMaps;
 import org.apache.bcel.classfile.JavaClass;
+import org.apache.bcel.util.ClassPath;
+import org.apache.bcel.util.Repository;
+import org.apache.bcel.util.SyntheticRepository;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.logging.log4j.LogManager;
@@ -33,23 +38,17 @@ import it.unimib.disco.essere.main.asengine.filters.CDShapeFilter;
 import it.unimib.disco.essere.main.asengine.filters.UDRateFilter;
 import it.unimib.disco.essere.main.asengine.udutils.UDPrinter;
 import it.unimib.disco.essere.main.asengine.udutils.UDUtils;
-import it.unimib.disco.essere.main.graphmanager.EmptyProjectException;
-import it.unimib.disco.essere.main.graphmanager.GraphBuilder;
-import it.unimib.disco.essere.main.graphmanager.GraphReader;
-import it.unimib.disco.essere.main.graphmanager.GraphUtils;
-import it.unimib.disco.essere.main.graphmanager.GraphWriter;
-import it.unimib.disco.essere.main.graphmanager.Neo4JGraphWriter;
-import it.unimib.disco.essere.main.graphmanager.PropertyEdge;
-import it.unimib.disco.essere.main.graphmanager.TypeVertexException;
 import it.unimib.disco.essere.main.systemreconstructor.SystemBuilder;
 import it.unimib.disco.essere.main.systemreconstructor.SystemBuilderByFolderOfJars;
 import it.unimib.disco.essere.main.systemreconstructor.SystemBuilderByJar;
 import it.unimib.disco.essere.main.systemreconstructor.SystemBuilderByUrl;
+import it.unimib.disco.essere.main.ETLE.Event;
 
 public class InterfaceModel
 {
     private static final Logger logger = LogManager.getLogger(InterfaceModel.class);
     private Graph graph = null;
+    private ExTimeLogger exTimeLogger;
 
     SystemBuilder _sys = null;
     private PackageMetricsCalculator _metricsCalculator = null;
@@ -65,10 +64,21 @@ public class InterfaceModel
     private boolean _jarsFolderMode = false;
     private boolean _asTdEvolution = false; // Modded
     private boolean _suppressNonAsTdEvolution = false; // Modded
-    private int classCount; // Modded
-    private int packCount; // Modded
-    private List<Vertex> classes; // Modded
-    private List<Vertex> packages; // Modded
+    private long totalClassCount; // Modded
+    private long totalPackCount; // Modded
+    private long extClassCount; // Modded
+    private long extPackCount; // Modded
+    private long intClassDependencyCount; // Modded
+    private long intPackageDependencyCount; // Modded
+    private long totalClassDependencyCount; // Modded
+    private long totalPackageDependencyCount; // Modded
+    private Map<String, Vertex> classes; // Modded
+    private Map<String, Vertex> packages; // Modded
+    private Set<String> extClasses; // Modded
+    private Set<String> extPackages; // Modded
+
+    private EdgeMaps edgeMaps; // Modded
+
     private List<Vertex> classCds; // Modded
     private List<Vertex> packCds; // Modded
     private List<Vertex> hds; // Modded
@@ -81,6 +91,8 @@ public class InterfaceModel
     private File _outDir;
 
     private OutputDirUtils outputDirUtils; // Modded
+    private ClassFilter _classFilter; // Modded
+    private Repository repo; // Modded
 
     private static final String FILE_HUB_LIKE = "HL.csv";
 
@@ -90,10 +102,10 @@ public class InterfaceModel
     private static final String FILE_PACKAGE_METRICS = "PM.csv";
     private static final String FILE_CLASS_METRICS = "CM.csv";
 
-
     public InterfaceModel(OutputDirUtils outputDirUtils)
     {
         this.outputDirUtils = outputDirUtils;
+        this.exTimeLogger = new ExTimeLogger();
     }
 
     public void setProjectFolder(File projectFolder)
@@ -136,6 +148,14 @@ public class InterfaceModel
         this._suppressNonAsTdEvolution = _suppressNonAsTdEvolution;
     }
 
+    public void set_classFilter(String classFilterPath) throws IOException
+    {
+        if (classFilterPath != null)
+        {
+            this._classFilter = new ClassFilter(classFilterPath);
+        }
+    }
+
     public Graph getGraph()
     {
         return graph;
@@ -148,17 +168,18 @@ public class InterfaceModel
         GraphBuilder graphB = null;
         GraphWriter graphW = null;
 
+        repo = SyntheticRepository.getInstance(new ClassPath(_projectFolder.getAbsolutePath()));
         if (!_jarsFolderMode && !_jarMode && _classMode)
         {
-            _sys = new SystemBuilderByUrl();
+            _sys = new SystemBuilderByUrl(_classFilter,exTimeLogger,repo);
         }
         if (_jarMode)
         {
-            _sys = new SystemBuilderByJar();
+            _sys = new SystemBuilderByJar(_classFilter,exTimeLogger,repo);
         }
         if (_jarsFolderMode)
         {
-            _sys = new SystemBuilderByFolderOfJars();
+            _sys = new SystemBuilderByFolderOfJars(_classFilter,exTimeLogger,repo);
         }
         logger.debug("***Start graph building*** - " + _projectFolder.toString());
         _sys.readClass(_projectFolder.toString());
@@ -166,7 +187,9 @@ public class InterfaceModel
         {
             throw new EmptyProjectException("No files to read founded");
         }
-        graphB = new GraphBuilder(_sys.getClassesHashMap(), _sys.getPackagesHashMap(), _asTdEvolution);
+        extClasses = _sys.getExtClasses();
+        extPackages = _sys.getExtPackages();
+        graphB = new GraphBuilder(_sys.getClassesHashMap(), _sys.getPackagesHashMap(), _asTdEvolution, exTimeLogger, extClasses,extPackages);
         graphW = new Neo4JGraphWriter();
         logger.info("***Start Writing Neo4j***");
         logger.debug("***Start Writing Neo4j*** - " + _dbFolder.toPath());
@@ -200,31 +223,42 @@ public class InterfaceModel
     {
         logger.info("***Start graph building*** - " + _projectFolder.toString());
         GraphBuilder graphB = null;
+        repo = SyntheticRepository.getInstance(new ClassPath(_projectFolder.getAbsolutePath()));
         if (!_jarsFolderMode && !_jarMode && _classMode)
         {
-            _sys = new SystemBuilderByUrl();
+            _sys = new SystemBuilderByUrl(_classFilter,exTimeLogger,repo);
         }
         if (_jarMode)
         {
-            _sys = new SystemBuilderByJar();
+            _sys = new SystemBuilderByJar(_classFilter,exTimeLogger,repo);
         }
         if (_jarsFolderMode)
         {
-            _sys = new SystemBuilderByFolderOfJars();
+            _sys = new SystemBuilderByFolderOfJars(_classFilter,exTimeLogger,repo);
         }
         logger.info("***Start graph building*** - " + _sys);
+        exTimeLogger.logEventStart(Event.CLASS_AND_PACK_READING);
         _sys.readClass(_projectFolder.toString());
-        graphB = new GraphBuilder(_sys.getClassesHashMap(), _sys.getPackagesHashMap(),_asTdEvolution);
+        exTimeLogger.logEventEnd(Event.CLASS_AND_PACK_READING);
+        extClasses = _sys.getExtClasses();
+        extPackages = _sys.getExtPackages();
+        graphB = new GraphBuilder(_sys.getClassesHashMap(), _sys.getPackagesHashMap(), _asTdEvolution, exTimeLogger, extClasses,extPackages);
         // _sys = null;
         logger.info("***Start Opening Tinkerpop***");
         graph = TinkerGraph.open();
         logger.info("***Graph initializated*** - graph:   " + graph);
         logger.info("***Graph initializated*** - builder: " + graphB);
+        exTimeLogger.logEventStart(Event.GRAPH_CREATION);
         graphB.createGraph(graph);
+        exTimeLogger.logEventEnd(Event.GRAPH_CREATION);
         logger.info("***Graph created from compiled file*** - graph:" + graph);
         initClassAndPackVars(graphB); // Modded
+        exTimeLogger.logEventStart(Event.CALC_CLASS_METRICS);
         computeAndStoreClassesMetrics();
+        exTimeLogger.logEventEnd(Event.CALC_CLASS_METRICS);
+        exTimeLogger.logEventStart(Event.CALC_PACK_METRICS);
         computeAndStorePackageMetrics();
+        exTimeLogger.logEventEnd(Event.CALC_PACK_METRICS);
         logger.info("***End of graph building***");
     }
 
@@ -233,13 +267,21 @@ public class InterfaceModel
     {
         classes = graphB.getClasses();
         packages = graphB.getPackages();
-        classCount = _sys.getClasses().size();
-        packCount = 0;
-        for (Vertex pack : packages)
+        extClassCount = graphB.getExtClassesCount();
+        extPackCount = graphB.getExtPacksCount();
+        totalClassCount = graphB.getTotalClassesCount();
+        totalPackCount = graphB.getTotalPacksCount();
+        intClassDependencyCount = graphB.getIntClassDependencyCount();
+        intPackageDependencyCount = graphB.getIntPackageDependencyCount();
+        totalClassDependencyCount = graphB.getTotalClassDependencyCount();
+        totalPackageDependencyCount = graphB.getTotalPackageDependencyCount();
+
+        edgeMaps = graphB.getEdgeMaps();
+        for (Vertex pack : packages.values())
         {
             if (GraphBuilder.SYSTEM_PACKAGE.equals(pack.value(GraphBuilder.PROPERTY_PACKAGE_TYPE)))
             {
-                packCount++;
+                totalPackCount++;
             }
         }
     }
@@ -257,12 +299,13 @@ public class InterfaceModel
 
     public boolean runUnstableDependencies() throws TypeVertexException, FileNotFoundException, IOException
     {
+        exTimeLogger.logEventStart(Event.UD_DETECTION);
         logger.info("***Start Unstable dependencies detection***" + graph);
-        _metricsCalculator = new PackageMetricsCalculator(graph,classes,packages);
-        _unstableDependencyDetector = new UnstableDependencyDetector(graph, _metricsCalculator);
+        _metricsCalculator = new PackageMetricsCalculator(graph, classes, packages);
+        _unstableDependencyDetector = new UnstableDependencyDetector(graph, _metricsCalculator, packages, edgeMaps);
 
         UDUtils.cleanUDDetection(graph);
-        MetricsUploader m = new MetricsUploader(graph,classes,packages);
+        MetricsUploader m = new MetricsUploader(graph, classes, packages,edgeMaps);
 
         try
         {
@@ -272,8 +315,7 @@ public class InterfaceModel
                 Neo4JGraphWriter graphW = new Neo4JGraphWriter();
                 graphW.write(graph, false);
             }
-        }
-        catch (TypeVertexException e)
+        } catch (TypeVertexException e)
         {
             logger.debug(e.getMessage());
         }
@@ -290,12 +332,12 @@ public class InterfaceModel
             }
 
             // Modded (additional if condition)
-            if(!_suppressNonAsTdEvolution)
+            if (!_suppressNonAsTdEvolution)
             {
                 Map<String, List<String>> smellMap = _unstableDependencyDetector.getSmellMap();
                 logger.debug("Obtained smell map of UD");
                 UDPrinter p = new UDPrinter(outputDirUtils.getOutputFolder(), _unstableDependencyDetector,
-                        FILE_UNSTABLE_DEPENDECY);
+                    FILE_UNSTABLE_DEPENDECY);
                 logger.debug("Created csv printer of UD");
                 p.print(smellMap);
                 logger.debug("UD csv printer");
@@ -304,6 +346,7 @@ public class InterfaceModel
             }
         }
         logger.info("***End of Unstable dependencies detection***" + graph);
+        exTimeLogger.logEventEnd(Event.UD_DETECTION);
         return ud;
     }
 
@@ -332,17 +375,19 @@ public class InterfaceModel
 
     public void runHubLikeDependencies() throws TypeVertexException, IOException
     {
+        exTimeLogger.logEventStart(Event.HD_DETECTION);
         logger.info("***Start of Hub-Like dependencies detection***" + graph);
         runHubLikeDependencies(outputDirUtils.getFileInOutputFolder(FILE_HUB_LIKE));
         logger.info("***End of Hub-Like dependencies detection***" + graph);
+        exTimeLogger.logEventEnd(Event.HD_DETECTION);
     }
 
     private boolean runHubLikeDependencies(File outputFilePath)
-            throws TypeVertexException, IOException
+        throws TypeVertexException, IOException
     {
         File outputFileCSVPath = outputFilePath;
-        _classMetricsCalculator = new ClassMetricsCalculator(graph);
-        _hubLikeDetector = new HubLikeDetector(graph, _classMetricsCalculator);
+        _classMetricsCalculator = new ClassMetricsCalculator(graph, classes, edgeMaps);
+        _hubLikeDetector = new HubLikeDetector(graph, _classMetricsCalculator, classes);
         Map<String, List<Integer>> hubLikeClasses = _hubLikeDetector.detect();
 
         // update metrics in graph
@@ -356,7 +401,7 @@ public class InterfaceModel
         if (hubLikeClasses != null && !hubLikeClasses.isEmpty())
         {
             // Modded (additional if condition)
-            if(!_suppressNonAsTdEvolution)
+            if (!_suppressNonAsTdEvolution)
             {
                 CSVFormat formatter = CSVFormat.EXCEL.withHeader("Class", "FanIn", "FanOut", "Total Dependences");
                 FileWriter writer = new FileWriter(outputFileCSVPath);
@@ -385,9 +430,10 @@ public class InterfaceModel
 
     public boolean runCycleDetector()
     {
+        exTimeLogger.logEventStart(Event.SUBCYLE_CD_DETECTION);
         logger.info("***Start cycles detection***" + graph);
         _cycleDetector = new CyclicDependencyDetector(graph, outputDirUtils.getOutputFolder(),
-            _suppressNonAsTdEvolution,classes,packages);
+            _suppressNonAsTdEvolution, classes, packages, edgeMaps);
 
         CDFilterUtils.cleanCDDetection(graph);
         _cycleDetector.detect();
@@ -398,10 +444,13 @@ public class InterfaceModel
         }
 
         // Modded (additional condition)
-        if(!_suppressNonAsTdEvolution)
+        if (!_suppressNonAsTdEvolution)
         {
-            CyclePrinter printer = new PrintToMatrix(classes);
-            CyclePrinter printer2 = new PrintToTable(classes);
+            List<Vertex> classList = new ArrayList<>(classes.values()); //modded
+            List<Vertex> packageList = new ArrayList<>(packages.values()); //modded
+
+            CyclePrinter printer = new PrintToMatrix(classList);
+            CyclePrinter printer2 = new PrintToTable(classList);
 
             printer.initializePrint(outputDirUtils.getOutputFolder(), GraphBuilder.CLASS);
             printer2.initializePrint(outputDirUtils.getOutputFolder(), GraphBuilder.CLASS);
@@ -412,8 +461,8 @@ public class InterfaceModel
             printer.closePrint();
             printer2.closePrint();
 
-            CyclePrinter printer3 = new PrintToMatrix(packages);
-            CyclePrinter printer4 = new PrintToTable(packages);
+            CyclePrinter printer3 = new PrintToMatrix(packageList);
+            CyclePrinter printer4 = new PrintToTable(packageList);
 
             printer3.initializePrint(outputDirUtils.getOutputFolder(), GraphBuilder.PACKAGE);
             printer4.initializePrint(outputDirUtils.getOutputFolder(), GraphBuilder.PACKAGE);
@@ -427,6 +476,7 @@ public class InterfaceModel
 
 
         logger.info("***End of cycles detection***" + graph);
+        exTimeLogger.logEventEnd(Event.SUBCYLE_CD_DETECTION);
         return true;
     }
 
@@ -465,20 +515,20 @@ public class InterfaceModel
         CyclePrinter printerShape = new PrintShapesDocker(nameFile);
         printerShape.initializePrint(outputFilePath, GraphBuilder.CLASS);
         printerShape.printCyclesFromGraph(graph, GraphUtils.findVerticesByProperty(graph, GraphBuilder.CYCLE_SHAPE,
-                GraphBuilder.PROPERTY_VERTEX_TYPE, GraphBuilder.CLASS));
+            GraphBuilder.PROPERTY_VERTEX_TYPE, GraphBuilder.CLASS));
         printerShape.closePrint();
 
         PrintShapesDocker printerShape2 = new PrintShapesDocker(nameFile);
         printerShape2.initializePrint(outputFilePath, GraphBuilder.PACKAGE, new String[]{
-                "IdCycle",
-                "CycleType",
-                "MinWeight",
-                "MaxWeight",
-                "numVertices",
-                "ElementList",
-                "ClassElementList"});
+            "IdCycle",
+            "CycleType",
+            "MinWeight",
+            "MaxWeight",
+            "numVertices",
+            "ElementList",
+            "ClassElementList"});
         printerShape2.printCyclesFromGraph(graph, GraphUtils.findVerticesByProperty(graph, GraphBuilder.CYCLE_SHAPE,
-                GraphBuilder.PROPERTY_VERTEX_TYPE, GraphBuilder.PACKAGE));
+            GraphBuilder.PROPERTY_VERTEX_TYPE, GraphBuilder.PACKAGE));
         printerShape2.closePrint();
 
         logger.info("***End of cycles filtering***" + graph);
@@ -491,11 +541,11 @@ public class InterfaceModel
         logger.debug("folder: " + outputDirUtils.getFileInOutputFolder(FILE_CLASS_METRICS));
         File fileCsv = outputDirUtils.getFileInOutputFolder(FILE_CLASS_METRICS);
 
-        CSVFormat formatter = CSVFormat.EXCEL.withHeader("Class", "FI", "FO", "CBO", "LCOM","PR"); // Modded
+        CSVFormat formatter = CSVFormat.EXCEL.withHeader("Class", "FI", "FO", "CBO", "LCOM", "PR"); // Modded
         FileWriter writer = new FileWriter(fileCsv);
         CSVPrinter printer = new CSVPrinter(writer, formatter);
 
-        for (Vertex clazz : classes)
+        for (Vertex clazz : classes.values())
         {
             String className = clazz.value(GraphBuilder.PROPERTY_NAME);
             String retrieved = clazz.value(GraphBuilder.PROPERTY_CLASS_TYPE);
@@ -522,52 +572,10 @@ public class InterfaceModel
 
     }
 
-    /**
-     * it is deprecated because it work only whene the compiled files are available
-     *
-     * @return
-     * @throws IOException
-     * @throws TypeVertexException
-     * @throws NullPointerException
-     */
-    @Deprecated
-    public boolean createCSVClassesMetricsOld() throws IOException, TypeVertexException, NullPointerException
-    {
-        logger.info("***Start of computation of class metrics***");
-        _classMetricsCalculator = new ClassMetricsCalculator(graph);
-
-        logger.debug("folder: " + outputDirUtils.getFileInOutputFolder(FILE_CLASS_METRICS));
-        File fileCsv = outputDirUtils.getFileInOutputFolder(FILE_CLASS_METRICS);
-
-        CSVFormat formatter = CSVFormat.EXCEL.withHeader("Class", "FI", "FO", "CBO", "LCOM");
-        FileWriter writer = new FileWriter(fileCsv);
-        CSVPrinter printer = new CSVPrinter(writer, formatter);
-        logger.debug("sys: " + _sys);
-        for (JavaClass clazz : _sys.getClasses())
-        {
-            String className = clazz.getClassName();
-            int fanIn = _classMetricsCalculator.calculateFanIn(className);
-            int fanOut = _classMetricsCalculator.calculateFanOut(className);
-            int cbo = _classMetricsCalculator.calculateCBO(className);
-            double lcom = _classMetricsCalculator.calculateLCOM(clazz);
-            printer.print(className);
-            printer.print(fanIn);
-            printer.print(fanOut);
-            printer.print(cbo);
-            printer.print(lcom);
-            printer.println();
-        }
-        printer.close();
-        writer.close();
-        logger.info("***End of computation of class metrics***");
-        return true;
-
-    }
-
     public boolean computeAndStoreClassesMetrics()
     {
         logger.info("***Start of computation of class metrics***");
-        _classMetricsCalculator = new ClassMetricsCalculator(graph);
+        _classMetricsCalculator = new ClassMetricsCalculator(graph, classes, edgeMaps);
 
         logger.debug("sys: " + _sys);
         if (_sys != null)
@@ -575,17 +583,11 @@ public class InterfaceModel
             for (JavaClass clazz : _sys.getClasses())
             {
                 String className = clazz.getClassName();
-                try
-                {
-                    _classMetricsCalculator.calculateFanIn(className);
-                    _classMetricsCalculator.calculateFanOut(className);
-                    _classMetricsCalculator.calculateCBO(className);
-                    _classMetricsCalculator.calculateLCOM(clazz);
-                }
-                catch (TypeVertexException e)
-                {
-                    e.printStackTrace();
-                }
+                Vertex classVertex = classes.get(className);
+                _classMetricsCalculator.calculateFanIn(classVertex);
+                _classMetricsCalculator.calculateFanOut(classVertex);
+                _classMetricsCalculator.calculateCBO(classVertex);
+                _classMetricsCalculator.calculateLCOM(clazz);
             }
 //			if (graph instanceof Neo4jGraph) {
 //				Neo4JGraphWriter graphW = new Neo4JGraphWriter();
@@ -605,9 +607,9 @@ public class InterfaceModel
     public boolean computeAndStorePackageMetrics()
     {
         logger.info("***Start of computation of package metrics***");
-        _metricsCalculator = new PackageMetricsCalculator(graph,classes,packages);
+        _metricsCalculator = new PackageMetricsCalculator(graph, classes, packages);
 
-        for (Vertex pkg : packages)
+        for (Vertex pkg : packages.values())
         {
             if (GraphBuilder.SYSTEM_PACKAGE.equals(pkg.value(GraphBuilder.PROPERTY_PACKAGE_TYPE)))
             {
@@ -621,8 +623,7 @@ public class InterfaceModel
                     _metricsCalculator.calculateInternalInstability(pkgname);
                     _metricsCalculator.calculateAbstractness(pkgname);
                     _metricsCalculator.calculateDistanceFromTheMainSequence(pkgname);
-                }
-                catch (TypeVertexException e)
+                } catch (TypeVertexException e)
                 {
                     e.printStackTrace();
                 }
@@ -635,9 +636,9 @@ public class InterfaceModel
     public boolean createCSVPackageMetrics() throws IOException, NoSuchElementException, TypeVertexException
     {
         logger.info("***Start of computation of package metrics***");
-        _metricsCalculator = new PackageMetricsCalculator(graph,classes,packages);
+        _metricsCalculator = new PackageMetricsCalculator(graph, classes, packages);
         // update
-        MetricsUploader mu = new MetricsUploader(graph,classes,packages);
+        MetricsUploader mu = new MetricsUploader(graph, classes, packages,edgeMaps);
         try
         {
             mu.updateInstability();
@@ -646,8 +647,7 @@ public class InterfaceModel
                 Neo4JGraphWriter graphW = new Neo4JGraphWriter();
                 graphW.write(graph, false);
             }
-        }
-        catch (TypeVertexException e)
+        } catch (TypeVertexException e)
         {
             logger.debug(e.getMessage());
         }
@@ -655,11 +655,11 @@ public class InterfaceModel
 
         File fileCsv = outputDirUtils.getFileInOutputFolder(FILE_PACKAGE_METRICS);
 
-        CSVFormat formatter = CSVFormat.EXCEL.withHeader("Package", "CA", "CE", "RMI", "RMA", "RMD","PR"); // Modded
+        CSVFormat formatter = CSVFormat.EXCEL.withHeader("Package", "CA", "CE", "RMI", "RMA", "RMD", "PR"); // Modded
         FileWriter writer = new FileWriter(fileCsv);
         CSVPrinter printer = new CSVPrinter(writer, formatter);
 
-        for (Vertex pkg : packages)
+        for (Vertex pkg : packages.values())
         {
             if (GraphBuilder.SYSTEM_PACKAGE.equals(pkg.value(GraphBuilder.PROPERTY_PACKAGE_TYPE)))
             {
@@ -689,9 +689,9 @@ public class InterfaceModel
     public boolean createCSVPackageMetricsOld() throws IOException, NoSuchElementException, TypeVertexException
     {
         logger.info("***Start of computation of package metrics***");
-        _metricsCalculator = new PackageMetricsCalculator(graph,classes,packages);
+        _metricsCalculator = new PackageMetricsCalculator(graph, classes, packages);
         // update
-        MetricsUploader mu = new MetricsUploader(graph,classes,packages);
+        MetricsUploader mu = new MetricsUploader(graph, classes, packages,edgeMaps);
         try
         {
             mu.updateInstability();
@@ -700,8 +700,7 @@ public class InterfaceModel
                 Neo4JGraphWriter graphW = new Neo4JGraphWriter();
                 graphW.write(graph, false);
             }
-        }
-        catch (TypeVertexException e)
+        } catch (TypeVertexException e)
         {
             logger.debug(e.getMessage());
         }
@@ -713,7 +712,7 @@ public class InterfaceModel
         FileWriter writer = new FileWriter(fileCsv);
         CSVPrinter printer = new CSVPrinter(writer, formatter);
 
-        for (Vertex pkg : packages)
+        for (Vertex pkg : packages.values())
         {
             if (GraphBuilder.SYSTEM_PACKAGE.equals(pkg.value(GraphBuilder.PROPERTY_PACKAGE_TYPE)))
             {
@@ -797,8 +796,7 @@ public class InterfaceModel
             {
                 graph.close();
             }
-        }
-        catch (Exception e)
+        } catch (Exception e)
         {
             e.printStackTrace();
         }
@@ -818,18 +816,17 @@ public class InterfaceModel
     }
 
 
-
     // Modded
-    public boolean detectSuperCycles()
+    public boolean detectCycles()
     {
-        classCds = _cycleDetector.getListOfCycleSmells(GraphBuilder.CLASS);
-        packCds = _cycleDetector.getListOfCycleSmells(GraphBuilder.PACKAGE);
-        hds = _hubLikeDetector.getListOfHubLikeSmells();
-        uds = _unstableDependencyDetector.getListOfUDSmells();
+        exTimeLogger.logEventStart(Event.CD_DETECTION);
         _superCycleDetector = new SuperCycleDetector();
-        _superCycleDetector.detectAndRegisterSuperCycles(graph, classes,packages,classCds,packCds,packCount,classCount);
+        _superCycleDetector.detectAndRegisterSuperCycles(graph, classes, packages, totalPackCount, totalClassCount, edgeMaps, _classFilter, exTimeLogger);
         classSupercycles = _superCycleDetector.getListOfSuperCycleSmells(GraphBuilder.CLASS);
         packSupercycles = _superCycleDetector.getListOfSuperCycleSmells(GraphBuilder.PACKAGE);
+        classCds = _superCycleDetector.getListOfSubCycles(GraphBuilder.CLASS);
+        packCds = _superCycleDetector.getListOfSubCycles(GraphBuilder.PACKAGE);
+        exTimeLogger.logEventEnd(Event.CD_DETECTION);
         return true;
     }
 
@@ -837,46 +834,53 @@ public class InterfaceModel
     // Modded
     public void initProjectMetricsCalculator()
     {
+        hds = _hubLikeDetector.getListOfHubLikeSmells();
+        uds = _unstableDependencyDetector.getListOfUDSmells();
         _projectMetricsCalculator = new ProjectMetricsCalculator
-            (classCount,packCount,classSupercycles,packSupercycles,hds,uds);
+            (totalClassCount, totalPackCount, extClassCount, extPackCount, classSupercycles,
+                packSupercycles, hds, uds,extClasses,extPackages, intClassDependencyCount,intPackageDependencyCount,
+                totalClassDependencyCount,totalPackageDependencyCount,exTimeLogger);
     }
 
 
     // Modded
     public boolean calculateTdAndOverlapRatios()
     {
+        exTimeLogger.logEventStart(Event.TD_OVERLAP_CALC);
         boolean result;
-        if(graph == null)
+        if (graph == null)
         {
             return true;
         }
         _projectMetricsCalculator.calcProjAsAffectedCompsAndOverlapRatios();
-
+        exTimeLogger.logEventStart(Event.PAGERANK_CALC);
         // Write PageRank value into all class and package nodes
-        result = PageRankCalculator.calculateAllPrVals(graph);
-
-        TdSmellCalculator tdSmellCalculator = new TdSmellCalculator(classCds,packCds,hds,uds);
+        PageRankCalculator pageRankCalculator = new PageRankCalculator();
+        result = pageRankCalculator.calculateAllPrVals(classes, packages);
+        exTimeLogger.logEventEnd(Event.PAGERANK_CALC);
+        exTimeLogger.logEventStart(Event.TD_CALC);
+        TdSmellCalculator tdSmellCalculator = new TdSmellCalculator(classCds, packCds, hds, uds);
         result &= tdSmellCalculator.calculateAllTdVals(_projectMetricsCalculator);
         TdSmellCalculator.calculateSuperCdTdVals(classSupercycles);
         TdSmellCalculator.calculateSuperCdTdVals(packSupercycles);
+        exTimeLogger.logEventEnd(Event.TD_CALC);
+        exTimeLogger.logEventEnd(Event.TD_OVERLAP_CALC);
         return result;
     }
 
     // Modded
-    public boolean calculateMiscMetrics(int loc)
+    public boolean calculateMiscMetrics(long loc)
     {
+        exTimeLogger.logEventStart(Event.MISC_METRICS_CALC);
         _projectMetricsCalculator.updateAsCounts(loc);
         MiscSmellMetricsCalculator miscSmellMetricsCalculator =
-            new MiscSmellMetricsCalculator(hds,uds,packSupercycles,packCount,classCount);
+            new MiscSmellMetricsCalculator(hds, uds, packSupercycles, totalPackCount, totalClassCount, edgeMaps, exTimeLogger);
         miscSmellMetricsCalculator.calculateAll();
+        exTimeLogger.logEventStart(Event.PROJECT_METRICS_AGGREGATES_CALC);
         _projectMetricsCalculator.calculateSmellPropertyAggregates();
-        return true;
-    }
-
-    // Modded
-    public boolean calculateMiscTdMetrics()
-    {
         _projectMetricsCalculator.calculateProjectTdMetrics();
+        exTimeLogger.logEventEnd(Event.PROJECT_METRICS_AGGREGATES_CALC);
+        exTimeLogger.logEventEnd(Event.MISC_METRICS_CALC);
         return true;
     }
 
@@ -884,8 +888,9 @@ public class InterfaceModel
     // Modded
     public boolean printAsTdEvolution() throws IOException
     {
-        AsTdEvolutionPrinter astdEPrinter = new AsTdEvolutionPrinter(outputDirUtils,_projectMetricsCalculator,
-            classSupercycles,packSupercycles,hds,uds);
+        exTimeLogger.logEventStart(Event.ARCAN_PRINTING);
+        AsTdEvolutionPrinter astdEPrinter = new AsTdEvolutionPrinter(outputDirUtils, _projectMetricsCalculator,
+            classSupercycles, packSupercycles, hds, uds, exTimeLogger, edgeMaps);
         astdEPrinter.printAll();
         return true;
     }

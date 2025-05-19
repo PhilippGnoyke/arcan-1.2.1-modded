@@ -85,7 +85,7 @@ public class TerminalExecutor {
 
 	// Modded
 	@Parameter(names = "-loc", description = "The LOC (number of lines of code) in the jar (retrievable from the source files)", converter = IntegerConverter.class)
-	private int _loc = 1;
+	private long _loc = 1;
 
 	// Modded
 	@Parameter(names = "-asTdEvolution", description = "Enable the modded features (td, supercycle CDs, etc.)")
@@ -98,6 +98,11 @@ public class TerminalExecutor {
 	// Modded
 	@Parameter(names = "-mute", description = "Suppress any logging except for errors")
 	private boolean _muteLogging = false;
+
+	// Modded
+	@Parameter(names = {"-classFilter", "-cf"}, description = "Optionally add a file that whitelists all classes to consider when building the dependency graph")
+	private String _classFilter = null;
+
 
 	private JCommander _k;
     private final Logger logger = LogManager.getLogger(TerminalExecutor.class);
@@ -149,9 +154,7 @@ public class TerminalExecutor {
 	// Modded
 	private void initLoggingLevel()
 	{
-		Level level;
-		if(_muteLogging){level = Level.OFF;}
-		else {level = Level.INFO;}
+		Level level = _muteLogging ? Level.OFF : Level.INFO;
 		org.apache.logging.log4j.core.config.Configurator.setRootLevel(level);
 	}
 
@@ -188,6 +191,7 @@ public class TerminalExecutor {
 					model.setDbFolder(_parNeo4j._dbFolder);
 					model.set_asTdEvolution(_asTdEvolution); // Modded
 					model.set_suppressNonAsTdEvolution(_suppressNonAsTdEvolution); // Modded
+					model.set_classFilter(_classFilter); // Modded
 
 					if (_parProject._projectFolder != null) {
 						model.setProjectFolder(_parProject._projectFolder);
@@ -214,12 +218,12 @@ public class TerminalExecutor {
 					// }
 					model.createOutPutFolderTerminal();
 
-					if (_all || _parAS._cycle) {
+					if ((_all || _parAS._cycle)  && !_suppressNonAsTdEvolution) {
 						logger.debug("***Start Cycle detection***" + graph);
 						model.runCycleDetector();
 						logger.debug("***End of Cycle detection***" + graph);
 						// Modded (additional condition)
-						if (_filter && !_suppressNonAsTdEvolution) {
+						if (_filter) {
 							logger.debug("***Start Cycle filtering***" + graph);
 							model.runCycleDetectorShapeFilter();
 							logger.debug("***End of Cycle filtering***" + graph);
@@ -245,11 +249,10 @@ public class TerminalExecutor {
 					// Modded
 					if(_asTdEvolution)
 					{
-						model.detectSuperCycles();
+						model.detectCycles();
 						model.initProjectMetricsCalculator();
 						model.calculateTdAndOverlapRatios();
 						model.calculateMiscMetrics(_loc);
-						model.calculateMiscTdMetrics();
 						model.printAsTdEvolution();
 					}
 					// Modded (additional condition)

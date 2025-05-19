@@ -1,7 +1,7 @@
 package it.unimib.disco.essere.main;
 
+import it.unimib.disco.essere.main.graphmanager.EdgeMaps;
 import it.unimib.disco.essere.main.graphmanager.GraphBuilder;
-import it.unimib.disco.essere.main.graphmanager.GraphUtils;
 import it.unimib.disco.essere.main.metricsengine.ProjectMetricsCalculator;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
@@ -28,10 +28,11 @@ public class AsTdEvolutionPrinter
     public static final String FILE_UDS_COMPS = "UDsComponents.csv";
     public static final String FOLDER_INTRA_VERSION_CLASS_CD_EDGES = "classCDEdges";
     public static final String FOLDER_INTRA_VERSION_PACK_CD_EDGES = "packageCDEdges";
-    public static final String FILE_INTRA_VERSION_CLASS_CD_MEFS = "classCDmEFS.csv";
-    public static final String FILE_INTRA_VERSION_PACK_CD_MEFS = "packageCDmEFS.csv";
-    public static final String FILE_INTRA_VERSION_CLASS_CD_MEFS_WO_TINYS = "classCDmEFSWOTinys.csv";
-    public static final String FILE_INTRA_VERSION_PACK_CD_MEFS_WO_TINYS = "packageCDmEFSWOTinys.csv";
+    public static final String FILE_INTRA_VERSION_CLASS_CD_MEFS = "ClassCDmEFS.csv";
+    public static final String FILE_INTRA_VERSION_PACK_CD_MEFS = "PackageCDmEFS.csv";
+    public static final String FILE_INTRA_VERSION_CLASS_CD_MEFS_WO_TINYS = "ClassCDmEFSWOTinys.csv";
+    public static final String FILE_INTRA_VERSION_PACK_CD_MEFS_WO_TINYS = "PackageCDmEFSWOTinys.csv";
+    public static final String FILE_EX_TIME_LOGS = "ExTimeLogs.csv";
 
     public static final String ID = "id";
     public static final String AFFECTED_COMPS = "affectedComponents";
@@ -39,6 +40,11 @@ public class AsTdEvolutionPrinter
     public static final String LESS_STABLE_PACKS = "lessStableDependedOnPackages";
     public static final String AFFERENT_CLASSES = "afferentClasses";
     public static final String EFFERENT_CLASSES = "efferentClasses";
+    public static final String PARENT_ID = "parentId";
+    public static final String DURATION = "cumulatedDuration";
+    public static final String EVENT_COUNT = "eventCount";
+    public static final String EVENT = "eventDescription";
+
 
     public static final String DEP_EDGE_OUT = "dependency edge outgoing from";
     public static final String DEP_EDGE_IN = "dependency edge incoming to...";
@@ -53,10 +59,14 @@ public class AsTdEvolutionPrinter
     private List<Vertex> packSupercycles;
     private List<Vertex> hds;
     private List<Vertex> uds;
+    private ExTimeLogger exTimeLogger;
+    private EdgeMaps edgeMaps; // Modded
+    private List<CSVPrinter> printers;
+    private List<FileWriter> writers;
 
     public AsTdEvolutionPrinter(OutputDirUtils outputDirUtils, ProjectMetricsCalculator projectMetricsCalculator,
                                 List<Vertex> classSupercycles, List<Vertex> packSupercycles,
-                                List<Vertex> hds, List<Vertex> uds)
+                                List<Vertex> hds, List<Vertex> uds, ExTimeLogger exTimeLogger, EdgeMaps edgeMaps)
     {
         this.outputDirUtils = outputDirUtils;
         this.projectMetricsCalculator = projectMetricsCalculator;
@@ -64,6 +74,10 @@ public class AsTdEvolutionPrinter
         this.uds = uds;
         this.classSupercycles = classSupercycles;
         this.packSupercycles = packSupercycles;
+        this.exTimeLogger = exTimeLogger;
+        this.edgeMaps = edgeMaps;
+        printers = new ArrayList<>();
+        writers = new ArrayList<>();
     }
 
     public void printAll() throws IOException, NullPointerException
@@ -73,6 +87,21 @@ public class AsTdEvolutionPrinter
         printPackCds();
         printHds();
         printUds();
+        exTimeLogger.logEventEnd(ETLE.Event.ARCAN_PRINTING);
+        printExTimeLogs();
+        closeAll();
+    }
+
+    private void closeAll() throws IOException
+    {
+        for(CSVPrinter printer : printers)
+        {
+            printer.close();
+        }
+        for(FileWriter writer : writers)
+        {
+            writer.close();
+        }
     }
 
     private void printCore(String file, String[] headers, PrinterCore printerCore) throws IOException, NullPointerException
@@ -87,8 +116,8 @@ public class AsTdEvolutionPrinter
         FileWriter writer = new FileWriter(fileCsv);
         CSVPrinter printer = new CSVPrinter(writer, formatter);
         printerCore.print(headers, printer);
-        printer.close();
-        writer.close();
+        printers.add(printer);
+        writers.add(writer);
     }
 
     private static String[] mergeStringArrays(String[]... arrays)
@@ -98,8 +127,16 @@ public class AsTdEvolutionPrinter
 
     public final static String[] projectMetricsHeaders = new String[]{
         ProjectMetricsCalculator.PROPERTY_LOC,
-        ProjectMetricsCalculator.PROPERTY_CLASS_COUNT,
-        ProjectMetricsCalculator.PROPERTY_PACK_COUNT,
+        ProjectMetricsCalculator.PROPERTY_TOTAL_CLASS_COUNT,
+        ProjectMetricsCalculator.PROPERTY_TOTAL_PACK_COUNT,
+        ProjectMetricsCalculator.PROPERTY_INT_CLASS_COUNT,
+        ProjectMetricsCalculator.PROPERTY_INT_PACK_COUNT,
+        ProjectMetricsCalculator.PROPERTY_EXT_CLASS_COUNT,
+        ProjectMetricsCalculator.PROPERTY_EXT_PACK_COUNT,
+        ProjectMetricsCalculator.PROPERTY_TOTAL_CLASS_DEP_COUNT,
+        ProjectMetricsCalculator.PROPERTY_TOTAL_PACK_DEP_COUNT,
+        ProjectMetricsCalculator.PROPERTY_INT_CLASS_DEP_COUNT,
+        ProjectMetricsCalculator.PROPERTY_INT_PACK_DEP_COUNT,
         ProjectMetricsCalculator.PROPERTY_AS_COUNT,
         ProjectMetricsCalculator.PROPERTY_ASS_PER_LOC,
         ProjectMetricsCalculator.PROPERTY_ASS_PER_CLASS,
@@ -144,6 +181,15 @@ public class AsTdEvolutionPrinter
         ProjectMetricsCalculator.PROPERTY_CLASS_SHARE_LARGEST_CLASS_CD,
         ProjectMetricsCalculator.PROPERTY_PACK_SHARE_LARGEST_PACK_CD
     };
+
+    public final static String[] exTimeLogsHeaders = new String[]{
+        ID,
+        PARENT_ID,
+        DURATION,
+        EVENT_COUNT,
+        EVENT
+    };
+
 
     private final static String[] generalSmellPropHeaders = new String[]{
         ID,
@@ -235,48 +281,79 @@ public class AsTdEvolutionPrinter
 
     public void printProjectMetrics() throws IOException, NullPointerException
     {
+        exTimeLogger.logEventStart(ETLE.Event.PRT_PROJECT_METRICS);
         printCore(FILE_PROJECT, projectMetricsHeaders, new ProjectMetricsPrinter());
+        exTimeLogger.logEventEnd(ETLE.Event.PRT_PROJECT_METRICS);
+    }
+
+    public void printExTimeLogs() throws IOException, NullPointerException
+    {
+        printCore(FILE_EX_TIME_LOGS, exTimeLogsHeaders, new ExTimeLogsPrinter());
     }
 
     public void printClassCds() throws IOException, NullPointerException
     {
+        exTimeLogger.logEventStart(ETLE.Event.PRT_CLASS_CDS_PROPS);
         printCore(FILE_CLASS_CDS_PROPS, classCdPropHeaders, new CdPropsPrinter(GraphBuilder.CLASS));
+        exTimeLogger.logEventEnd(ETLE.Event.PRT_CLASS_CDS_PROPS);
+        exTimeLogger.logEventStart(ETLE.Event.PRT_CLASS_CDS_COMPS);
         printCore(FILE_CLASS_CDS_COMPS, cdCompHeaders, new CdCompsPrinter(GraphBuilder.CLASS));
+        exTimeLogger.logEventEnd(ETLE.Event.PRT_CLASS_CDS_COMPS);
+        exTimeLogger.logEventStart(ETLE.Event.PRT_CLASS_CDS_EDGES);
         outputDirUtils.createSubDirFullPath(outputDirUtils.getFolderInOutputFolder(FOLDER_INTRA_VERSION_CLASS_CD_EDGES));
         for (Vertex smell : classSupercycles)
         {
             File file = outputDirUtils.getFileInSubOutputFolder(FOLDER_INTRA_VERSION_CLASS_CD_EDGES, smell.id().toString() + ".csv");
             printCore(file, cdEdgeHeaders, new CdEdgesPrinter(GraphBuilder.CLASS, smell));
         }
+        exTimeLogger.logEventEnd(ETLE.Event.PRT_CLASS_CDS_EDGES);
+        exTimeLogger.logEventStart(ETLE.Event.PRT_CLASS_CDS_MEFS);
         printCore(FILE_INTRA_VERSION_CLASS_CD_MEFS, cdMEFSHeaders, new MEFSPrinter(GraphBuilder.CLASS,false));
         printCore(FILE_INTRA_VERSION_CLASS_CD_MEFS_WO_TINYS, cdMEFSHeaders, new MEFSPrinter(GraphBuilder.CLASS,true));
+        exTimeLogger.logEventEnd(ETLE.Event.PRT_CLASS_CDS_MEFS);
 
     }
 
     public void printPackCds() throws IOException, NullPointerException
     {
+        exTimeLogger.logEventStart(ETLE.Event.PRT_PACK_CDS_PROPS);
         printCore(FILE_PACK_CDS_PROPS, packCdPropHeaders, new CdPropsPrinter(GraphBuilder.PACKAGE));
+        exTimeLogger.logEventEnd(ETLE.Event.PRT_PACK_CDS_PROPS);
+        exTimeLogger.logEventStart(ETLE.Event.PRT_PACK_CDS_COMPS);
         printCore(FILE_PACK_CDS_COMPS, cdCompHeaders, new CdCompsPrinter(GraphBuilder.PACKAGE));
+        exTimeLogger.logEventEnd(ETLE.Event.PRT_PACK_CDS_COMPS);
+        exTimeLogger.logEventStart(ETLE.Event.PRT_PACK_CDS_EDGES);
         outputDirUtils.createSubDirFullPath(outputDirUtils.getFolderInOutputFolder(FOLDER_INTRA_VERSION_PACK_CD_EDGES));
         for (Vertex smell : packSupercycles)
         {
             File file = outputDirUtils.getFileInSubOutputFolder(FOLDER_INTRA_VERSION_PACK_CD_EDGES, smell.id().toString() + ".csv");
             printCore(file, cdEdgeHeaders, new CdEdgesPrinter(GraphBuilder.PACKAGE, smell));
         }
+        exTimeLogger.logEventEnd(ETLE.Event.PRT_PACK_CDS_EDGES);
+        exTimeLogger.logEventStart(ETLE.Event.PRT_PACK_CDS_MEFS);
         printCore(FILE_INTRA_VERSION_PACK_CD_MEFS, cdMEFSHeaders, new MEFSPrinter(GraphBuilder.PACKAGE,false));
         printCore(FILE_INTRA_VERSION_PACK_CD_MEFS_WO_TINYS, cdMEFSHeaders, new MEFSPrinter(GraphBuilder.PACKAGE,true));
+        exTimeLogger.logEventEnd(ETLE.Event.PRT_PACK_CDS_MEFS);
     }
 
     public void printHds() throws IOException, NullPointerException
     {
+        exTimeLogger.logEventStart(ETLE.Event.PRT_HDS_PROPS);
         printCore(FILE_HDS_PROPS, hdPropHeaders, new HdPropsPrinter());
+        exTimeLogger.logEventEnd(ETLE.Event.PRT_HDS_PROPS);
+        exTimeLogger.logEventStart(ETLE.Event.PRT_HDS_COMPS);
         printCore(FILE_HDS_COMPS, hdCompHeaders, new HdCompsPrinter());
+        exTimeLogger.logEventEnd(ETLE.Event.PRT_HDS_COMPS);
     }
 
     public void printUds() throws IOException, NullPointerException
     {
+        exTimeLogger.logEventStart(ETLE.Event.PRT_UDS_PROPS);
         printCore(FILE_UDS_PROPS, udPropHeaders, new UdPropsPrinter());
+        exTimeLogger.logEventEnd(ETLE.Event.PRT_UDS_PROPS);
+        exTimeLogger.logEventStart(ETLE.Event.PRT_UDS_COMPS);
         printCore(FILE_UDS_COMPS, udCompHeaders, new UdCompsPrinter());
+        exTimeLogger.logEventEnd(ETLE.Event.PRT_UDS_COMPS);
     }
 
     private interface PrinterCore
@@ -295,6 +372,23 @@ public class AsTdEvolutionPrinter
             printer.println();
         }
     }
+
+    private class ExTimeLogsPrinter implements PrinterCore
+    {
+        public void print(String[] headers, CSVPrinter printer) throws IOException
+        {
+            for (ExTimeLogger.ExTimeLoggerEvent event : exTimeLogger.getEvents())
+            {
+                printer.print(event.getEventId());
+                printer.print(event.getParentId());
+                printer.print(event.getDurationInMilliSecs());
+                printer.print(event.getEventCount());
+                printer.print(event.getEventDescription());
+                printer.println();
+            }
+        }
+    }
+
 
     private class CdPropsPrinter implements PrinterCore
     {
@@ -455,7 +549,7 @@ public class AsTdEvolutionPrinter
         printer.print(compNames);
     }
 
-    private static void printCdEdgesCore(CSVPrinter printer, Vertex supercycle, String depLabel) throws IOException
+    private void printCdEdgesCore(CSVPrinter printer, Vertex supercycle, String depLabel) throws IOException
     {
         Iterator<Edge> compEdges = supercycle.edges(Direction.OUT, GraphBuilder.LABEL_SUPERCYCLE_AFFECTED);
 
@@ -471,7 +565,7 @@ public class AsTdEvolutionPrinter
             size++;
         }
 
-        List<Edge> depEdges = GraphUtils.allEdgesBetweenVertices(new HashSet<>(affected), depLabel);
+        List<Edge> depEdges = edgeMaps.getSuperCycleEdges(supercycle);
         boolean[][] edgeMatrix = new boolean[size][size];
 
         for (Edge edge : depEdges)

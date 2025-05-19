@@ -3,6 +3,7 @@ package it.unimib.disco.essere.main.asengine;
 import java.io.File;
 import java.util.*;
 
+import it.unimib.disco.essere.main.graphmanager.EdgeMaps;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tinkerpop.gremlin.structure.Edge;
@@ -21,14 +22,17 @@ public class CyclicDependencyDetector {
     public static final String PACKAGE_CYCLES = "packageCycles";
     public static final String CLASSES_CYCLES = "classesCycles";
     private static final Logger logger = LogManager.getLogger(CyclicDependencyDetector.class);
-    public Graph graph;
+    private Graph graph;
     //private List<Vertex> classes = null; // Modded (removed)
     private File path = null;
     private final List<Vertex> cdClassSmells = new LinkedList<>(); // Modded (reduce graph traversals)
     private List<Vertex> cdPackageSmells = new LinkedList<>(); // Modded (reduce graph traversals)
 
-    private List<Vertex> packages; // Modded
-    private List<Vertex> classes; // Modded
+    private Map<String,Vertex> packages; // Modded
+    private Map<String,Vertex> classes; // Modded
+    private EdgeMaps edgeMaps; // Modded
+
+
 
     private boolean _suppressNonAsTdEvolution = false; // Modded
 
@@ -36,19 +40,37 @@ public class CyclicDependencyDetector {
     public CyclicDependencyDetector(Graph graph, File path) {
         this.graph = graph;
         this.path = path;
-        this.classes = GraphUtils.findVerticesByLabel(graph, GraphBuilder.CLASS);
-        this.packages = GraphUtils.findVerticesByLabel(graph, GraphBuilder.PACKAGE);
+        //Modded
+        List<Vertex> classList = GraphUtils.findVerticesByLabel(graph, GraphBuilder.CLASS);
+        List<Vertex> packageList = GraphUtils.findVerticesByLabel(graph, GraphBuilder.PACKAGE);
+        for (Vertex vertex : classList) {
+            classes.put(vertex.value(GraphBuilder.PROPERTY_NAME), vertex);
+        }
+        for (Vertex vertex : packageList) {
+            packages.put(vertex.value(GraphBuilder.PROPERTY_NAME), vertex);
+        }
+        this.edgeMaps = new EdgeMaps(graph);
     }
 
     // Modded
-    public CyclicDependencyDetector(Graph graph, File path,boolean suppressNonAsTdEvolution,
-                                    List<Vertex> classes, List<Vertex> packages) {
+    public CyclicDependencyDetector(Graph graph,File path,boolean suppressNonAsTdEvolution,
+                                    Map<String,Vertex> classes, Map<String,Vertex> packages, EdgeMaps edgeMaps) {
         this.graph = graph;
         this.path = path;
         this._suppressNonAsTdEvolution = suppressNonAsTdEvolution;
         this.classes = classes;
         this.packages = packages;
+        this.edgeMaps = edgeMaps;
     }
+
+    // Modded
+    public CyclicDependencyDetector(Graph graph, EdgeMaps edgeMaps) {
+        this.graph = graph;
+        this._suppressNonAsTdEvolution = true;
+        this.edgeMaps = edgeMaps;
+    }
+
+
 
     public void detect() {
         detectCyclesGephiInternal();
@@ -58,6 +80,7 @@ public class CyclicDependencyDetector {
      * Detects the project cycles using the gephi algorithm. It analyzes all
      * packages and classes of the system.
      */
+    /**
     private void detectCyclesGephi() {
         logger.debug("***Start Cycle detection with Gephi algorithm***");
         SedgewickWayneDFSCycleDetectionAlg algoC = new SedgewickWayneDFSCycleDetectionAlg(this,
@@ -75,38 +98,48 @@ public class CyclicDependencyDetector {
 
         logger.debug("***End Cycle detection with Gephi algorithm***");
     }
-
+     /**
     /**
      * Detect the project cycles using the gephi algorithm. It only analyzes
      * classes and packages internal to the system (not retrieved).
      */
     private void detectCyclesGephiInternal() {
-        List<Vertex> classVertices = GraphUtils.filterProperty(
-                classes, GraphBuilder.PROPERTY_CLASS_TYPE,
-                GraphBuilder.SYSTEM_CLASS);
+        //List<Vertex> classVertices = GraphUtils.filterProperty(
+        //        (List<Vertex>) classes.values(), GraphBuilder.PROPERTY_CLASS_TYPE,
+        //        GraphBuilder.SYSTEM_CLASS);
 
-        List<Vertex> packageVertices = GraphUtils.filterProperty(
-                packages, GraphBuilder.PROPERTY_PACKAGE_TYPE,
-                GraphBuilder.SYSTEM_PACKAGE);
+        //List<Vertex> packageVertices = GraphUtils.filterProperty(
+        //        (List<Vertex>) packages.values(), GraphBuilder.PROPERTY_PACKAGE_TYPE,
+        //        GraphBuilder.SYSTEM_PACKAGE);
 
         logger.debug("***Start Internal Class Cycle detection with Gephi algorithm***");
-        SedgewickWayneDFSCycleDetectionAlg algoC = new SedgewickWayneDFSCycleDetectionAlg(this,classVertices,
-                GraphUtils.findEdgesByLabel(graph, GraphBuilder.LBL_CLASS_DEP), graph, path,
-                GraphBuilder.CLASS,_suppressNonAsTdEvolution);
+        SedgewickWayneDFSCycleDetectionAlg algoC = new SedgewickWayneDFSCycleDetectionAlg(this,new HashSet<>(classes.values()),
+                GraphBuilder.LBL_CLASS_DEP, graph, path,
+                GraphBuilder.CLASS,_suppressNonAsTdEvolution,edgeMaps);
         algoC.execute();
 
         logger.debug("***End Internal Class Cycle detection with Gephi algorithm***");
 
         logger.debug("***Start Internal Package Cycle detection with Gephi algorithm***");
 
-        SedgewickWayneDFSCycleDetectionAlg algoP = new SedgewickWayneDFSCycleDetectionAlg(this,packageVertices,
-                GraphUtils.findEdgesByLabel(graph, GraphBuilder.LABEL_PACKAGE_AFFERENCE), graph, path,
-                GraphBuilder.PACKAGE,_suppressNonAsTdEvolution);
+        SedgewickWayneDFSCycleDetectionAlg algoP = new SedgewickWayneDFSCycleDetectionAlg(this,new HashSet<>(packages.values()),
+                GraphBuilder.LABEL_PACKAGE_AFFERENCE, graph, path,
+                GraphBuilder.PACKAGE,_suppressNonAsTdEvolution,edgeMaps);
 
         algoP.execute();
 
         logger.debug("***End Internal Package Cycle detection with Gephi algorithm***");
     }
+
+
+    //Modded
+    public void detectSubCycles(Set<Vertex>comps, String vertexType, String depLabel)
+    {
+        SedgewickWayneDFSCycleDetectionAlg algo = new SedgewickWayneDFSCycleDetectionAlg(this,comps,
+            depLabel, graph, path, vertexType,_suppressNonAsTdEvolution,edgeMaps);
+        algo.execute();
+    }
+
 
     // Maybe move it to CDUtils
     // Modded from here
