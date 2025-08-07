@@ -27,10 +27,12 @@ public class HubLikeDetector {
     private int totalNumFanOut;
     private int classesWithFanIn;
     private int classesWithFanOut;
-    private List<Vertex> hdSmells = new ArrayList<>(); // Modded (reduce graph traversals)
+    private Map<String,Vertex> hdSmells = new HashMap<>(); // Modded (reduce graph traversals)
 
     private Set<Integer> fanins = new HashSet<>();
     private Set<Integer> fanouts = new HashSet<>();
+
+    private Map<String,Vertex> classes;
 
     public HubLikeDetector(Graph graph, ClassMetricsCalculator calc) {
         this._graph = graph;
@@ -38,15 +40,14 @@ public class HubLikeDetector {
         smells = new HashMap<>();
     }
 
+    public HubLikeDetector(Graph graph, ClassMetricsCalculator calc,Map<String,Vertex> classes) {
+        this(graph,calc);
+        this.classes = classes;
+    }
+
+
     public Map<String, List<Integer>> detect() throws TypeVertexException {
         logger.debug("start hub like class detection");
-
-        List<Vertex> classes = new ArrayList<>();
-        for (Vertex v : GraphUtils.findVerticesByLabel(_graph, GraphBuilder.CLASS)) {
-            if (v.value(GraphBuilder.PROPERTY_CLASS_TYPE).equals(GraphBuilder.SYSTEM_CLASS)) {
-                classes.add(v);
-            }
-        }
         int medianFanIn = 0;
         int medianFanOut = 0;
 
@@ -74,14 +75,16 @@ public class HubLikeDetector {
                         && Math.abs(entry.getValue().get(1) - entry.getValue().get(2)) <= entry.getValue().get(0)
                                 / THRESHOLD) {
                     smells.put(entry.getKey(), entry.getValue());
-                    Vertex smellNode = GraphUtils.findVertex(_graph, entry.getKey(), GraphBuilder.SMELL);
+                    Vertex smellNode = hdSmells.get(entry.getKey());
+                    //Vertex smellNode = GraphUtils.findVertex(_graph, entry.getKey(), GraphBuilder.SMELL);
 
                     if (smellNode == null) {
                         smellNode = GraphUtils.createHLSmellVertex(_graph, entry.getKey(), entry.getValue().get(1),
                                 entry.getValue().get(2), entry.getValue().get(0));
-                        hdSmells.add(smellNode);
+                        hdSmells.put(entry.getKey(),smellNode);
                         logger.debug("smell vertex: " + smellNode + " with key: " + entry.getKey());
-                        Vertex classNode = GraphUtils.findVertex(_graph, entry.getKey(), GraphBuilder.CLASS);
+                        Vertex classNode = classes.get(entry.getKey());
+                        //Vertex classNode = GraphUtils.findVertex(_graph, entry.getKey(), GraphBuilder.CLASS);
                         logger.debug("class node vertex: " + classNode + " with key: " + entry.getKey());
                         smellNode.addEdge(GraphBuilder.LABEL_AFFECTED_CLASS, classNode);
                         Iterator<Edge> classesIn = classNode.edges(Direction.IN,
@@ -112,38 +115,42 @@ public class HubLikeDetector {
         return smells;
     }
 
-    public Map<String, List<Integer>> getNumDependences(List<Vertex> classes) throws TypeVertexException {
+    public Map<String, List<Integer>> getNumDependences(Map<String,Vertex> classes) throws TypeVertexException {
         Map<String, List<Integer>> allDependences = new HashMap<>();
 
         int fanIn = 0;
         int fanOut = 0;
 
-        for (Vertex v : classes) {
-            List<Integer> dep = new ArrayList<>();
+        for (Vertex v : classes.values()) {
+            if (v.value(GraphBuilder.PROPERTY_CLASS_TYPE).equals(GraphBuilder.SYSTEM_CLASS))
+            {
+                List<Integer> dep = new ArrayList<>();
 
-            fanIn = calc.calculateFanIn(v);
-            fanOut = calc.calculateFanOut(v);
-            int vNumDependences = fanIn + fanOut;
+                fanIn = calc.calculateFanIn(v);
+                fanOut = calc.calculateFanOut(v);
+                int vNumDependences = fanIn + fanOut;
 
-            totalNumDependences += vNumDependences;
-            if (fanIn > 0) {
-                fanins.add(fanIn);
+                totalNumDependences += vNumDependences;
+                if (fanIn > 0)
+                {
+                    fanins.add(fanIn);
 
-                totalNumFanIn += fanIn;
-                ++classesWithFanIn;
+                    totalNumFanIn += fanIn;
+                    ++classesWithFanIn;
+                }
+                if (fanOut > 0)
+                {
+                    fanouts.add(fanOut);
+
+                    totalNumFanOut += fanOut;
+                    ++classesWithFanOut;
+                }
+
+                dep.add(vNumDependences);
+                dep.add(fanIn);
+                dep.add(fanOut);
+                allDependences.put(v.value(GraphBuilder.PROPERTY_NAME), dep);
             }
-            if (fanOut > 0) {
-                fanouts.add(fanOut);
-
-                totalNumFanOut += fanOut;
-                ++classesWithFanOut;
-            }
-
-            dep.add(vNumDependences);
-            dep.add(fanIn);
-            dep.add(fanOut);
-            allDependences.put(v.value(GraphBuilder.PROPERTY_NAME), dep);
-
         }
         return allDependences;
     }
@@ -161,7 +168,7 @@ public class HubLikeDetector {
 
     // Modded
     public List<Vertex> getListOfHubLikeSmells() {
-        return hdSmells;
+        return new ArrayList<>(hdSmells.values());
     }
 
 }

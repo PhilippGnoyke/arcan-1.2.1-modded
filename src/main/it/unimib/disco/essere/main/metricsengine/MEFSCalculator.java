@@ -1,5 +1,6 @@
 package it.unimib.disco.essere.main.metricsengine;
 
+import it.unimib.disco.essere.main.graphmanager.EdgeMaps;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import org.apache.tinkerpop.gremlin.structure.Edge;
@@ -7,31 +8,36 @@ import org.apache.tinkerpop.gremlin.structure.Vertex;
 
 import java.util.*;
 
-// Calculates mEFS from:
-// Eades, P., Lin, X., & Smyth, W. F. (1993). A fast and effective heuristic for the feedback arc set problem. Information Processing Letters, 47(6), 319–323.
 public class MEFSCalculator
 {
-    private Set<Vertex> remainingComps;
+    private final Set<Vertex> remainingComps;
     private final List<Edge> edges;
-    private List<Vertex> sequence1;
-    private List<Vertex> sequence2;
-    private Set<Edge> edgeFeedbackSet;
-    private Set<Edge> edgeFeedbackSetWOTinys;
-    private int maxMEFSSize;
+
+    private final List<Vertex> sequence1 = new ArrayList<>();
+    private final List<Vertex> sequence2 = new ArrayList<>();
+
+    private final Set<Edge> edgeFeedbackSet;
+    private final Set<Edge> edgeFeedbackSetWOTinys;
 
     private Multimap<Vertex, Vertex> incoming;
     private Multimap<Vertex, Vertex> outgoing;
     private Multimap<Vertex, Vertex> outgoing2;
 
+    private final Map<Vertex, Integer> indegrees = new HashMap<>();
+    private final Map<Vertex, Integer> outdegrees = new HashMap<>();
+
+    private final PriorityQueue<Vertex> deltaQueue;
+
     public MEFSCalculator(Set<Vertex> comps, List<Edge> edges)
     {
         this.remainingComps = new HashSet<>(comps);
         this.edges = edges;
-        this.sequence1 = new ArrayList<>();
-        this.sequence2 = new ArrayList<>();
-        this.maxMEFSSize = edges.size() - comps.size() + 1;
-        this.edgeFeedbackSet = new HashSet<>(maxMEFSSize);
-        this.edgeFeedbackSetWOTinys = new HashSet<>(maxMEFSSize);
+
+        this.edgeFeedbackSet = new HashSet<>();
+        this.edgeFeedbackSetWOTinys = new HashSet<>();
+
+        this.deltaQueue = new PriorityQueue<>(Comparator.<Vertex>comparingInt(this::getDelta).reversed());
+
         initMaps();
         calcMFES();
     }
@@ -75,180 +81,182 @@ public class MEFSCalculator
     {
         incoming = HashMultimap.create();
         outgoing = HashMultimap.create();
+
         for (Edge edge : edges)
         {
-            Vertex inVertex = edge.inVertex();
-            Vertex outVertex = edge.outVertex();
-            incoming.put(inVertex, outVertex);
-            outgoing.put(outVertex, inVertex);
+            Vertex out = edge.outVertex();
+            Vertex in = edge.inVertex();
+
+            if (!remainingComps.contains(out) || !remainingComps.contains(in)) { continue; }
+
+            incoming.put(in, out);
+            outgoing.put(out, in);
+
+            indegrees.put(in, indegrees.getOrDefault(in, 0) + 1);
+            outdegrees.put(out, outdegrees.getOrDefault(out, 0) + 1);
         }
+
         outgoing2 = HashMultimap.create(outgoing);
+        deltaQueue.addAll(remainingComps);
+    }
+
+    private int getDelta(Vertex v)
+    {
+        return outdegrees.getOrDefault(v, 0) - indegrees.getOrDefault(v, 0);
     }
 
     private void calcMFES()
     {
-        while (remainingComps.size() > 0)
+        while (!remainingComps.isEmpty())
         {
-            checkForSink();
-            checkForSource();
-            removeMaxDelta();
+            boolean changed = true;
+
+            while (changed)
+            {
+                changed = checkForSink() || checkForSource();
+            }
+
+            if (!remainingComps.isEmpty())
+            {
+                removeMaxDelta();
+            }
         }
+
         determineBackwardEdges();
     }
 
-    private void determineBackwardEdges()
+    private boolean checkForSink()
     {
-        Map<Vertex, Integer> vertexIndexes = buildVertexIndexes();
-        HashMultimap<Vertex,Edge> incomingLeftEdges = HashMultimap.create();
-        HashMultimap<Vertex,Edge> outgoingLeftEdges = HashMultimap.create();
-        for (Edge edge : edges)
+        for (Vertex vertex : remainingComps)
         {
-            Vertex outVertex = edge.outVertex();
-            Vertex inVertex = edge.inVertex();
-            boolean isBackwardsEdge = vertexIndexes.get(outVertex) > vertexIndexes.get(inVertex);
-            if (isBackwardsEdge)
+            if (!outgoing.containsKey(vertex) && incoming.containsKey(vertex))
             {
-                edgeFeedbackSet.add(edge);
-                updateEFSWOTinysData(incomingLeftEdges, outgoingLeftEdges, edge, outVertex, inVertex);
+                sequence2.add(vertex);
+                removeVertex(vertex);
+                return true;
             }
         }
-        updateSetWOTinysWithUnavoidableBackrefs(vertexIndexes, incomingLeftEdges, outgoingLeftEdges);
+        return false;
     }
 
-    private void updateEFSWOTinysData(HashMultimap<Vertex, Edge> incomingLeftEdges, HashMultimap<Vertex,
-        Edge> outgoingLeftEdges, Edge edge, Vertex outVertex, Vertex inVertex)
+    private boolean checkForSource()
     {
-        if (!outgoing2.containsEntry(inVertex, outVertex))
+        for (Vertex vertex : remainingComps)
         {
-            edgeFeedbackSetWOTinys.add(edge);
-        }
-        else
-        {
-            incomingLeftEdges.put(inVertex, edge);
-            outgoingLeftEdges.put(outVertex, edge);
-        }
-    }
-
-    // Not all backrefs can be kept to only have tiny supercycles left after removing all edges in the mEFS
-    // Strategy: Every vertex can only have one left-facing edge in the mEFS
-    // All additional incoming and outgoing left-facing edges per vertex lead to supercycles of higher orders
-    // Thus, they must be removed as well
-    private void updateSetWOTinysWithUnavoidableBackrefs(Map<Vertex, Integer> vertexIndexes, HashMultimap<Vertex, Edge> incomingLeftEdges, HashMultimap<Vertex, Edge> outgoingLeftEdges)
-    {
-        for (Vertex vertex : vertexIndexes.keySet())
-        {
-            Set<Edge> incoming = incomingLeftEdges.get(vertex);
-            Set<Edge> outgoing = outgoingLeftEdges.get(vertex);
-            while (incoming.size()+outgoing.size()>1)
+            if (!incoming.containsKey(vertex) && outgoing.containsKey(vertex))
             {
-                Iterator<Edge> iterator = incoming.iterator();
-                if(!iterator.hasNext()) { iterator = outgoing.iterator(); }
-                edgeFeedbackSetWOTinys.add(iterator.next());
-                iterator.remove();
+                sequence1.add(vertex);
+                removeVertex(vertex);
+                return true;
             }
         }
+        return false;
     }
 
-    private Map<Vertex, Integer> buildVertexIndexes()
+    private void removeMaxDelta()
     {
-        Map<Vertex, Integer> vertexIndexes = new HashMap<>();
-        int vertexIndex;
-        for (vertexIndex = 0; vertexIndex < sequence1.size(); vertexIndex++)
-        {
-            vertexIndexes.put(sequence1.get(vertexIndex), vertexIndex);
-        }
-        for (vertexIndex = sequence1.size() + sequence2.size() - 1; vertexIndex >= sequence1.size(); vertexIndex--)
-        {
-            vertexIndexes.put(sequence2.get(vertexIndex - sequence1.size()), vertexIndex);
-        }
-        return vertexIndexes;
-    }
+        Vertex maxVertex = null;
+        int maxDelta = Integer.MIN_VALUE;
 
-    private void checkForSink()
-    {
-        Vertex sink = findSink();
-        while (sink != null)
+        for (Vertex vertex : remainingComps)
         {
-            sequence2.add(sink);
-            removeVertex(sink);
-            sink = findSink();
+            int delta = getDelta(vertex);
+            if (delta > maxDelta)
+            {
+                maxDelta = delta;
+                maxVertex = vertex;
+            }
         }
-    }
 
-    private void checkForSource()
-    {
-        Vertex source = findSource();
-        while (source != null)
+        if (maxVertex != null)
         {
-            sequence1.add(source);
-            removeVertex(source);
-            source = findSource();
+            sequence1.add(maxVertex);
+            removeVertex(maxVertex);
         }
     }
 
     private void removeVertex(Vertex vertex)
     {
         remainingComps.remove(vertex);
-        removeVertexFromMultimap(incoming, vertex);
-        removeVertexFromMultimap(outgoing, vertex);
-    }
+        deltaQueue.remove(vertex);
 
-
-    private void removeVertexFromMultimap(Multimap<Vertex, Vertex> multimap, Vertex toBeRemoved)
-    {
-        Set<Vertex> keys = new HashSet<>(multimap.keySet());
-        for (Vertex key : keys)
+        for (Vertex neighbor : new HashSet<>(incoming.get(vertex)))
         {
-            Set<Vertex> vertexSet = new HashSet<>(multimap.get(key));
-            vertexSet.remove(toBeRemoved);
-            multimap.replaceValues(key, vertexSet);
+            outgoing.remove(neighbor, vertex);
+            outdegrees.put(neighbor, outdegrees.get(neighbor) - 1);
         }
+
+        for (Vertex neighbor : new HashSet<>(outgoing.get(vertex)))
+        {
+            incoming.remove(neighbor, vertex);
+            indegrees.put(neighbor, indegrees.get(neighbor) - 1);
+        }
+
+        incoming.removeAll(vertex);
+        outgoing.removeAll(vertex);
     }
 
-    private Vertex findSink()
+    private void determineBackwardEdges()
     {
-        for (Vertex vertex : remainingComps)
+        Map<Vertex, Integer> vertexIndexes = buildVertexIndexes();
+        Multimap<Vertex, Edge> incomingLeftEdges = HashMultimap.create();
+        Multimap<Vertex, Edge> outgoingLeftEdges = HashMultimap.create();
+
+        for (Edge edge : edges)
         {
-            if (!outgoing.containsKey(vertex) && incoming.containsKey(vertex))
+            Vertex out = edge.outVertex();
+            Vertex in = edge.inVertex();
+
+            if (vertexIndexes.get(out) > vertexIndexes.get(in))
             {
-                return vertex;
+                edgeFeedbackSet.add(edge);
+
+                if (!outgoing2.containsEntry(in, out))
+                {
+                    edgeFeedbackSetWOTinys.add(edge);
+                }
+                else
+                {
+                    incomingLeftEdges.put(in, edge);
+                    outgoingLeftEdges.put(out, edge);
+                }
             }
         }
-        return null;
+
+        updateSetWOTinysWithUnavoidableBackrefs(vertexIndexes, incomingLeftEdges, outgoingLeftEdges);
     }
 
-    private Vertex findSource()
+    private void updateSetWOTinysWithUnavoidableBackrefs(Map<Vertex, Integer> vertexIndexes,
+                                                         Multimap<Vertex, Edge> incomingLeftEdges,
+                                                         Multimap<Vertex, Edge> outgoingLeftEdges)
     {
-        for (Vertex vertex : remainingComps)
+        for (Vertex vertex : vertexIndexes.keySet())
         {
-            if (!incoming.containsKey(vertex) && outgoing.containsKey(vertex))
+            Set<Edge> in = new HashSet<>(incomingLeftEdges.get(vertex));
+            Set<Edge> out = new HashSet<>(outgoingLeftEdges.get(vertex));
+
+            while (in.size() + out.size() > 1)
             {
-                return vertex;
+                Iterator<Edge> it = in.isEmpty() ? out.iterator() : in.iterator();
+                Edge toRemove = it.next();
+                edgeFeedbackSetWOTinys.add(toRemove);
+                it.remove();
             }
         }
-        return null;
     }
 
-    private void removeMaxDelta()
+    private Map<Vertex, Integer> buildVertexIndexes()
     {
-        Vertex maxDeltaVertex = getMaxDeltaVertex();
-        sequence1.add(maxDeltaVertex);
-        removeVertex(maxDeltaVertex);
-    }
-
-    private Vertex getMaxDeltaVertex()
-    {
-        Vertex maxVertex = null;
-        int maxDelta = 0;
-        for (Vertex vertex : remainingComps)
+        Map<Vertex, Integer> indexes = new HashMap<>();
+        int i = 0;
+        for (Vertex v : sequence1)
         {
-            int delta = outgoing.get(vertex).size() - incoming.get(vertex).size();
-            if (delta >= maxDelta)
-            {
-                maxDelta = delta;
-                maxVertex = vertex;
-            }
+            indexes.put(v, i++);
         }
-        return maxVertex;
+        for (int j = sequence2.size() - 1; j >= 0; j--)
+        {
+            indexes.put(sequence2.get(j), i++);
+        }
+        return indexes;
     }
 }

@@ -12,6 +12,7 @@ import java.util.*;
 public class ClassFilter
 {
     private Set<String> sharedClasses;
+    private Set<String> sharedPackages;
 
     public ClassFilter(String filePath) throws IOException
     {
@@ -24,9 +25,14 @@ public class ClassFilter
         CSVParser records = CSVFormat.DEFAULT.withIgnoreHeaderCase().
             withHeader(header).withFirstRecordAsHeader().parse(new FileReader(filePath));
         sharedClasses = new HashSet<>((int) records.getRecordNumber() * 2);
+        sharedPackages = new HashSet<>((int) records.getRecordNumber());
         for (CSVRecord record : records)
         {
-            sharedClasses.add(record.get(header));
+            String className = record.get(header);
+            sharedClasses.add(className);
+            int lastDot = className.lastIndexOf('.');
+            String packageName = (lastDot != -1) ? className.substring(0, lastDot) : "";
+            sharedPackages.add(packageName);
         }
     }
 
@@ -35,5 +41,14 @@ public class ClassFilter
         return sharedClasses.contains(fullyQualifiedName);
     }
 
+    public boolean isSharedPackage(String fullyQualifiedPName)
+    {
+        return sharedPackages.contains(fullyQualifiedPName);
+    }
+
+    public boolean isSharedComponent(String fullyQualifiedName)
+    {
+        return isSharedClass(fullyQualifiedName) || isSharedPackage(fullyQualifiedName);
+    }
 
 }

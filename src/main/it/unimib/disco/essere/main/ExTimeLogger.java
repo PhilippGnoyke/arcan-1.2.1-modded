@@ -19,7 +19,7 @@ public class ExTimeLogger
         if (events.containsKey(event))
         {
             ExTimeLoggerEvent exTimeLoggerEvent = events.get(event);
-            if (exTimeLoggerEvent.getStarted())
+            if (exTimeLoggerEvent.hasBeenStarted())
             {
                 throw new IllegalStateException("Started the same event twice");
             }
@@ -40,7 +40,7 @@ public class ExTimeLogger
         if (events.containsKey(event))
         {
             ExTimeLoggerEvent exTimeLoggerEvent = events.get(event);
-            if (exTimeLoggerEvent.getStarted())
+            if (exTimeLoggerEvent.hasBeenStarted())
             {
                 exTimeLoggerEvent.finish();
             }
@@ -54,6 +54,25 @@ public class ExTimeLogger
             throw new IllegalStateException("The event was not started even once!");
         }
     }
+
+    public void subtractEventFromEvent(ETLE.Event eventMain, ETLE.Event toBeSubtracted)
+    {
+        ExTimeLoggerEvent event = events.get(eventMain);
+        if(events.containsKey(toBeSubtracted))
+        {
+            ExTimeLoggerEvent eventToBeSubtracted = events.get(toBeSubtracted);
+            event.subtractTime(eventToBeSubtracted.getDurationInNanoSecs());
+        }
+    }
+
+    public void subtractEventsFromEvent(ETLE.Event eventMain, ETLE.Event[] toBeSubtracted)
+    {
+        for (ETLE.Event eventToBeSubtracted : toBeSubtracted)
+        {
+            subtractEventFromEvent(eventMain, eventToBeSubtracted);
+        }
+    }
+
 
     public Collection<ExTimeLoggerEvent> getEvents()
     {
@@ -77,7 +96,7 @@ public class ExTimeLogger
             this.started = true;
         }
 
-        private boolean getStarted()
+        private boolean hasBeenStarted()
         {
             return started;
         }
@@ -106,14 +125,24 @@ public class ExTimeLogger
             return parent == null ? NO_PARENT : parent.ordinal();
         }
 
+        private void subtractTime(long toSubtract)
+        {
+            cumulatedDuration -= toSubtract;
+        }
+
         public String getEventDescription()
         {
             return ETLE.getText(event);
         }
 
+        private long getDurationInNanoSecs()
+        {
+            return cumulatedDuration;
+        }
+
         public long getDurationInMilliSecs()
         {
-            return cumulatedDuration / 1000000;
+            return getDurationInNanoSecs() / 1000000;
         }
 
         public int getEventCount()

@@ -5,17 +5,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import it.unimib.disco.essere.main.graphmanager.EdgeMaps;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
 
-
-import it.unimib.disco.essere.main.asengine.UnstableDependencyDetector;
 import it.unimib.disco.essere.main.graphmanager.GraphBuilder;
 import it.unimib.disco.essere.main.graphmanager.GraphUtils;
 
@@ -28,9 +26,14 @@ public class UDUtils {
      * @param d
      * @param v
      */
+
     public static void createMap(Map<String, List<String>> smellMap, Direction d, Vertex v) {
+        createMap(smellMap,d,v,new EdgeMaps(v.graph()));
+    }
+
+    public static void createMap(Map<String, List<String>> smellMap, Direction d, Vertex v, EdgeMaps edgeMaps) {
         List<Edge> badDependencies;
-        badDependencies = GraphUtils.getEdgesByVertex(GraphBuilder.LABEL_BAD_DEPENDENCY, v, d);
+        badDependencies = edgeMaps.getEdgesByOutVertex(GraphBuilder.LABEL_BAD_DEPENDENCY, v);
         List<String> correlatedPackages = new ArrayList<>();
         GraphUtils.logger.debug("bad dep: " + badDependencies);
         for(Edge e : badDependencies){

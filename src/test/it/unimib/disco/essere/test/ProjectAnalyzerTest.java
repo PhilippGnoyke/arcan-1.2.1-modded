@@ -81,7 +81,7 @@ public class ProjectAnalyzerTest {
         classCalc = new ClassMetricsCalculator(graph);
         UDDetector = new UnstableDependencyDetector(graph, packageCalc);
         HLDetector = new HubLikeDetector(graph, classCalc);
-        CDDetector = new CyclicDependencyDetector(graph, null);
+        CDDetector = new CyclicDependencyDetector(graph, new File("empty"));
         logger.info("***End setup***");
     }
 

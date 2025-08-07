@@ -5,6 +5,7 @@ import java.util.*;
 import it.unimib.disco.essere.main.metricsengine.ProjectMetricsCalculator;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Graph;
@@ -114,6 +115,7 @@ public class GraphUtils {
         }
 
     }
+
 
     /**
      * Finds all nodes marked with a label.
@@ -282,15 +284,6 @@ public class GraphUtils {
         return filtered;
     }
 
-    public static List<Vertex> filterProperty(List<Vertex> toFilter, String property, Integer propertyValue) {
-        List<Vertex> filtered = new ArrayList<>();
-        for (Vertex v : toFilter) {
-            if (v.value(property).equals(propertyValue)) {
-                filtered.add(v);
-            }
-        }
-        return filtered;
-    }
 
     /**
      * @param fullClassName
@@ -307,10 +300,9 @@ public class GraphUtils {
 
     // Modded
     // Returns the set of edges between a set of vertices
-    public static List<Edge> allEdgesBetweenVertices(Set<Vertex> vertices, String... labels)
+    public static List<Edge> allEdgesBetweenVertices(Set<Vertex> vertices, String... labels) //TODO
     {
         List<Edge> edges = new ArrayList<>();
-
         for(Vertex vertex : vertices)
         {
             Iterator<Edge> localEdges = vertex.edges(Direction.OUT,labels);
@@ -333,33 +325,12 @@ public class GraphUtils {
     }
 
 
-    // Modded
-    // Returns the set of backref edges between a set of vertices
-    public static List<Edge> allBackrefEdgesBetweenVertices(Set<Vertex> vertices, String... labels)
-    {
-        List<Edge> edges = new ArrayList<>();
-
-
-        for(Vertex vertex : vertices)
-        {
-            Iterator<Edge> localEdges = vertex.edges(Direction.OUT,labels);
-            while(localEdges.hasNext())
-            {
-                Edge localEdge = localEdges.next();
-                if(vertices.contains(localEdge.inVertex()))
-                {
-                    edges.add(localEdge);
-                }
-            }
-        }
-        return edges;
-    }
-
     //Modded
     public static Vertex getPackageOfClass(Vertex classVertex)
     {
         return classVertex.edges(Direction.OUT,PropertyEdge.LABEL_PACKAGE_DEPENDENCY.toString()).next().inVertex();
     }
+
 
 }
 

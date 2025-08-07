@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.stream.Stream;
 
+import it.unimib.disco.essere.main.ExTimeLogger;
 import it.unimib.disco.essere.main.graphmanager.ClassFilter;
 import org.apache.bcel.util.Repository;
 import org.apache.bcel.classfile.ClassParser;
@@ -25,8 +26,8 @@ public class SystemBuilderByUrl extends SystemBuilder {
         super();
     }
 
-    public SystemBuilderByUrl(ClassFilter classFilter, Repository repo) {
-        super(classFilter,repo);
+    public SystemBuilderByUrl(ClassFilter classFilter, ExTimeLogger exTimeLogger, Repository repo) {
+        super(classFilter,exTimeLogger, repo);
     }
 
     @Override
@@ -59,7 +60,7 @@ public class SystemBuilderByUrl extends SystemBuilder {
                                     }
                                     else if(classFilter!=null && !classFilter.isSharedClass(className))
                                     {
-                                        this.getExtClasses().add(className);
+                                        this.getExtClasses().add(clazz.getClassName());
                                         this.getExtPackages().add(GraphUtils.getPackageName(className));
                                     }
                                 } catch (Exception e) {

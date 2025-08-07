@@ -1,13 +1,14 @@
 package it.unimib.disco.essere.main.asengine;
 
+import it.unimib.disco.essere.main.ETLE;
+import it.unimib.disco.essere.main.ExTimeLogger;
 import it.unimib.disco.essere.main.asengine.alg.TarjansAlgorithm;
-import it.unimib.disco.essere.main.graphmanager.GraphBuilder;
-import it.unimib.disco.essere.main.graphmanager.GraphUtils;
-import it.unimib.disco.essere.main.graphmanager.PropertyEdge;
+import it.unimib.disco.essere.main.graphmanager.*;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,44 +19,74 @@ public class SuperCycleDetector
 
     private List<Vertex> superCycleClassCdSmells; //(reduce graph traversals)
     private List<Vertex> superCyclePackageCdSmells; //(reduce graph traversals)
+    private List<Vertex> classSubcycles;
+    private List<Vertex> packSubcycles;
     private long packCount;
     private long classCount;
+    private EdgeMaps edgeMaps;
+    ClassFilter classFilter;
+    private ExTimeLogger exTimeLogger;
+
+    public SuperCycleDetector()
+    {
+        classSubcycles = new ArrayList<>();
+        packSubcycles = new ArrayList<>();
+    }
+
 
     public void detectAndRegisterSuperCycles
-        (Graph graph, List<Vertex> classes, List<Vertex> packs, List<Vertex> classSubs, List<Vertex> packSubs,
-         long packCount, long classCount)
+        (Graph graph, Map<String, Vertex> classes, Map<String, Vertex> packs,
+         long packCount, long classCount, EdgeMaps edgeMaps, ClassFilter classFilter, ExTimeLogger exTimeLogger)
     {
         this.packCount = packCount;
         this.classCount = classCount;
-        superCycleClassCdSmells = detectAndRegisterSuperCyclesCore(graph, classes, GraphBuilder.CLASS, GraphBuilder.LBL_CLASS_DEP, classSubs);
-        superCyclePackageCdSmells = detectAndRegisterSuperCyclesCore(graph, packs, GraphBuilder.PACKAGE, GraphBuilder.LBL_PACK_DEP, packSubs);
+        this.edgeMaps = edgeMaps;
+        this.classFilter = classFilter;
+        this.exTimeLogger = exTimeLogger;
+        superCycleClassCdSmells = detectAndRegisterSuperCyclesCore(graph, classes, GraphBuilder.CLASS, classSubcycles);
+        superCyclePackageCdSmells = detectAndRegisterSuperCyclesCore(graph, packs, GraphBuilder.PACKAGE, packSubcycles);
     }
 
     private List<Vertex> detectAndRegisterSuperCyclesCore
-        (Graph graph, List<Vertex> comps, String vertexType, String depLabel, List<Vertex> subcycles)
+        (Graph graph, Map<String, Vertex> comps, String vertexType, List<Vertex> subcycles)
     {
-        TarjansAlgorithm tarjansAlgorithm = new TarjansAlgorithm(graph, comps, vertexType, depLabel,packCount,classCount);
+        ETLE.Event event;
+        ETLE.Event[] toBeSubtracted;
+        if (vertexType.equals(GraphBuilder.CLASS))
+        {
+            event = ETLE.Event.CDS_SUPERCYLE_CLASS_CD_DETECTION;
+            toBeSubtracted = new ETLE.Event[]{
+                ETLE.Event.CDS_SUBCYCLE_CLASS_CD_DETECTION,
+                ETLE.Event.CDS_SUPERCYCLE_CLASS_CD_MEFS,
+                ETLE.Event.CDS_SUPERCYLE_CLASS_CD_SHAPE};
+        }
+        else
+        {
+            event = ETLE.Event.CDS_SUPERCYLE_PACK_CD_DETECTION;
+            toBeSubtracted = new ETLE.Event[]{
+                ETLE.Event.CDS_SUBCYCLE_PACK_CD_DETECTION,
+                ETLE.Event.CDS_SUPERCYCLE_PACK_CD_MEFS,
+                ETLE.Event.CDS_SUPERCYLE_PACK_CD_SHAPE};
+        }
+        exTimeLogger.logEventStart(event);
+        TarjansAlgorithm tarjansAlgorithm = new TarjansAlgorithm(graph, comps,subcycles, vertexType,
+            packCount, classCount, edgeMaps, classFilter, exTimeLogger);
         tarjansAlgorithm.calc();
         List<Vertex> supercycles = tarjansAlgorithm.getSupercycles();
-        assignSubCycles(subcycles,tarjansAlgorithm.getVertexIdsToSupercycleIds());
-        return supercycles;
-    }
 
-    private static void assignSubCycles
-        (List<Vertex> subcycles, Map<Object,Vertex> vertexIdsToSupercycles)
-    {
-        for (Vertex subCycle : subcycles)
-        {
-            Object cycleStartId = GraphUtils.getEdgesByVertex
-                (GraphBuilder.LABEL_START_CYCLE, subCycle, Direction.OUT).get(0).inVertex().id();
-            Vertex supercycle = vertexIdsToSupercycles.get(cycleStartId);
-            subCycle.addEdge(GraphBuilder.LABEL_SUB_OF_SUPERCYCLE, supercycle);
-            GraphUtils.incrementVertexIntProperty(supercycle, GraphBuilder.PROPERTY_NUM_SUBCYCLES);
-        }
+        exTimeLogger.logEventEnd(event);
+        exTimeLogger.subtractEventsFromEvent(event, toBeSubtracted);
+        return supercycles;
     }
 
     public List<Vertex> getListOfSuperCycleSmells(String vertexType)
     {
         return vertexType.equals(GraphBuilder.CLASS) ? superCycleClassCdSmells : superCyclePackageCdSmells;
     }
+
+    public List<Vertex> getListOfSubCycles(String vertexType)
+    {
+        return vertexType.equals(GraphBuilder.CLASS) ? classSubcycles : packSubcycles;
+    }
+
 }

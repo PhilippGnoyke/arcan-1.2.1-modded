@@ -218,12 +218,12 @@ public class TerminalExecutor {
 					// }
 					model.createOutPutFolderTerminal();
 
-					if (_all || _parAS._cycle) {
+					if ((_all || _parAS._cycle)  && !_suppressNonAsTdEvolution) {
 						logger.debug("***Start Cycle detection***" + graph);
 						model.runCycleDetector();
 						logger.debug("***End of Cycle detection***" + graph);
 						// Modded (additional condition)
-						if (_filter && !_suppressNonAsTdEvolution) {
+						if (_filter) {
 							logger.debug("***Start Cycle filtering***" + graph);
 							model.runCycleDetectorShapeFilter();
 							logger.debug("***End of Cycle filtering***" + graph);
@@ -249,7 +249,7 @@ public class TerminalExecutor {
 					// Modded
 					if(_asTdEvolution)
 					{
-						model.detectSuperCycles();
+						model.detectCycles();
 						model.initProjectMetricsCalculator();
 						model.calculateTdAndOverlapRatios();
 						model.calculateMiscMetrics(_loc);
