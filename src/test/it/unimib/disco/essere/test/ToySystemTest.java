@@ -135,14 +135,17 @@ public class ToySystemTest {
     public void calculateCBOTest() {
         Vertex classVertexClass1 = GraphUtils.findVertex(graph, "it.unimib.disco.essere.toysystem.origin.Class1",GraphBuilder.CLASS);
         Vertex classVertexZeus = GraphUtils.findVertex(graph, "it.unimib.disco.essere.toysystem.olympusextension.Zeus",GraphBuilder.CLASS);
+        try {
+            int cbo = classCalc.calculateCBO(classVertexClass1);
+            int cboZeus = classCalc.calculateCBO(classVertexZeus);
 
-        int cbo = classCalc.calculateCBO(classVertexClass1);
-        int cboZeus = classCalc.calculateCBO(classVertexZeus);
-
-        assertEquals(2.0, cbo, 0.0);
-        logger.debug("CBO di Class1: " + cbo);
-        assertEquals(3.0, cboZeus, 0.0);
-        logger.debug("CBO di Zeus: " + cboZeus);
+            assertEquals(2.0, cbo, 0.0);
+            logger.debug("CBO di Class1: " + cbo);
+            assertEquals(3.0, cboZeus, 0.0);
+            logger.debug("CBO di Zeus: " + cboZeus);
+        } catch (TypeVertexException e) {
+            logger.error(e.getMessage());
+        }
     }
 
     @Test

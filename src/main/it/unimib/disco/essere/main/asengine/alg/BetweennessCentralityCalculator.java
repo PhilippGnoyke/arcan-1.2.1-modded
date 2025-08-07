@@ -36,17 +36,17 @@ package it.unimib.disco.essere.main.asengine.alg;
  * knowledge of the CeCILL-C and LGPL licenses and that you accept their terms.
  */
 
-import it.unimib.disco.essere.main.ETLE;
-import it.unimib.disco.essere.main.ExTimeLogger;
-import it.unimib.disco.essere.main.graphmanager.EdgeMaps;
-import it.unimib.disco.essere.main.graphmanager.GraphBuilder;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
-import org.neo4j.cypher.internal.compiler.v1_9.commands.Has;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.PriorityQueue;
+import java.util.Set;
 
 
 /**
@@ -104,54 +104,51 @@ public class BetweennessCentralityCalculator
 {
     private final static double INFINITY = 1000000.0;
 
-    private Collection<Vertex> comps;
-    private Map<Vertex, List<Edge>> edges;
-    private ExTimeLogger exTimeLogger;
-    private String vertexType;
-    private Map<Vertex, Double> sigmas;
-    private Map<Vertex, Double> deltas;
-    private Map<Vertex, Double> distances;
-    private Map<Vertex, Double> centralities;
-    private Map<Vertex, Set<Vertex>> preds;
+    /**
+     * Store the centrality value in this attribute on vertices and edges.
+     */
+    public final static String PROPERTY_BETWEENNESS_CENTRALITY = "betweennessCentrality";
 
-    public BetweennessCentralityCalculator(Collection<Vertex> comps, Map<Vertex, List<Edge>> edges, ExTimeLogger exTimeLogger, String vertexType)
-    {
-        this.comps = comps;
-        this.edges = edges;
-        this.exTimeLogger = exTimeLogger;
-        this.vertexType = vertexType;
-        int mapSize = comps.size() * 2;
-        sigmas = new HashMap<>(mapSize);
-        deltas = new HashMap<>(mapSize);
-        distances = new HashMap<>(mapSize);
-        centralities = new HashMap<>(mapSize);
-        preds = new HashMap<>(mapSize);
-    }
+    /**
+     * The predecessors.
+     */
+    private final static String PRED_ATTRIBUTE_NAME = "brandes.P";
 
+    /**
+     * The sigma value.
+     */
+    private final static String SIGMA_ATTRIBUTE_NAME = "brandes.sigma";
+
+    /**
+     * The distance value.
+     */
+    private final static String DIST_ATTRIBUTE_NAME = "brandes.d";
+
+    /**
+     * The delta value.
+     */
+    private final static String DELTA_ATTRIBUTE_NAME = "brandes.delta";
 
     /**
      * Compute the betweenness centrality on the given graph for each vertex and
      * eventually edges.
      */
-    public void betweennessCentrality()
+    public void betweennessCentrality(Graph graph, int order)
     {
-        exTimeLogger.logEventStart(vertexType.equals(GraphBuilder.CLASS) ?
-            ETLE.Event.BC_CLASS_INIT_VERTICES : ETLE.Event.BC_PACK_INIT_VERTICES);
-        initAllVertices();
-        exTimeLogger.logEventEnd(vertexType.equals(GraphBuilder.CLASS) ?
-            ETLE.Event.BC_CLASS_INIT_VERTICES : ETLE.Event.BC_PACK_INIT_VERTICES);
+        initAllVertices(graph);
 
-        for (Vertex s : comps)
+        Iterator<Vertex> vertices = graph.vertices();
+        while (vertices.hasNext())
         {
-            PriorityQueue<Vertex> queue = simpleExplore(s);
+            Vertex s = vertices.next();
+            PriorityQueue<Vertex> S = simpleExplore(s, graph, order);
 
             // The really new things in the Brandes algorithm are here:
             // Accumulation phase:
-            exTimeLogger.logEventStart(vertexType.equals(GraphBuilder.CLASS) ?
-                ETLE.Event.BC_CLASS_EMPTY_QUEUE : ETLE.Event.BC_PACK_EMPTY_QUEUE);
-            while (!queue.isEmpty())
+
+            while (!S.isEmpty())
             {
-                Vertex w = queue.poll();
+                Vertex w = S.poll();
 
                 for (Vertex v : predecessorsOf(w))
                 {
@@ -163,8 +160,6 @@ public class BetweennessCentralityCalculator
                     setCentrality(w, centrality(w) + delta(w));
                 }
             }
-            exTimeLogger.logEventEnd(vertexType.equals(GraphBuilder.CLASS) ?
-                ETLE.Event.BC_CLASS_EMPTY_QUEUE : ETLE.Event.BC_PACK_EMPTY_QUEUE);
         }
     }
 
@@ -173,45 +168,35 @@ public class BetweennessCentralityCalculator
      * graph.
      *
      * @param source The source vertex.
+     * @param graph  The graph.
      * @return A priority queue of explored vertices with sigma values usable to
      * compute the centrality.
      */
-    private PriorityQueue<Vertex> simpleExplore(Vertex source)
+    private PriorityQueue<Vertex> simpleExplore(Vertex source, Graph graph, int order)
     {
-        exTimeLogger.logEventStart(vertexType.equals(GraphBuilder.CLASS) ?
-            ETLE.Event.BC_CLASS_SE_INIT_QUEUES : ETLE.Event.BC_PACK_SE_INIT_QUEUES);
-        Queue<Vertex> queue = new ArrayDeque<>();
-        PriorityQueue<Vertex> priorityQueue = new PriorityQueue<>(comps.size(), new BrandesvertexComparatorLargerFirst());
-        exTimeLogger.logEventEnd(vertexType.equals(GraphBuilder.CLASS) ?
-            ETLE.Event.BC_CLASS_SE_INIT_QUEUES : ETLE.Event.BC_PACK_SE_INIT_QUEUES);
-        exTimeLogger.logEventStart(vertexType.equals(GraphBuilder.CLASS) ?
-            ETLE.Event.BC_CLASS_SE_SETUP_VERTICES : ETLE.Event.BC_PACK_SE_SETUP_VERTICES);
-        setupAllVertices();
-        queue.add(source);
+        LinkedList<Vertex> Q = new LinkedList<>();
+        PriorityQueue<Vertex> S = new PriorityQueue<>(order, new BrandesvertexComparatorLargerFirst());
+
+        setupAllVertices(graph);
+        Q.add(source);
         setSigma(source, 1.0);
         setDistance(source, 0.0);
-        exTimeLogger.logEventEnd(vertexType.equals(GraphBuilder.CLASS) ?
-            ETLE.Event.BC_CLASS_SE_SETUP_VERTICES : ETLE.Event.BC_PACK_SE_SETUP_VERTICES);
 
-        while (!queue.isEmpty())
+        while (!Q.isEmpty())
         {
-            exTimeLogger.logEventStart(vertexType.equals(GraphBuilder.CLASS) ?
-                ETLE.Event.BC_CLASS_SE_PROCESS_QUEUE : ETLE.Event.BC_PACK_SE_PROCESS_QUEUE);
-            Vertex v = queue.remove();
-            priorityQueue.add(v);
-            exTimeLogger.logEventEnd(vertexType.equals(GraphBuilder.CLASS) ?
-                ETLE.Event.BC_CLASS_SE_PROCESS_QUEUE : ETLE.Event.BC_PACK_SE_PROCESS_QUEUE);
-            exTimeLogger.logEventStart(vertexType.equals(GraphBuilder.CLASS) ?
-                ETLE.Event.BC_CLASS_SE_PROCESS_EDGES : ETLE.Event.BC_PACK_SE_PROCESS_EDGES);
-            List<Edge> outEdges = edges.get(v);
-            for (Edge edge : outEdges)
+            Vertex v = Q.removeFirst();
+
+            S.add(v);
+            Iterator<? extends Edge> ww = v.edges(Direction.OUT);
+            while (ww.hasNext())
             {
-                Vertex w = edge.inVertex();
+                Edge l = ww.next();
+                Vertex w = l.inVertex();
 
                 if (distance(w) == INFINITY)
                 {
                     setDistance(w, distance(v) + 1);
-                    queue.add(w);
+                    Q.add(w);
                 }
 
                 if (distance(w) == (distance(v) + 1.0))
@@ -220,10 +205,9 @@ public class BetweennessCentralityCalculator
                     addToPredecessorsOf(w, v);
                 }
             }
-            exTimeLogger.logEventEnd(vertexType.equals(GraphBuilder.CLASS) ?
-                ETLE.Event.BC_CLASS_SE_PROCESS_EDGES : ETLE.Event.BC_PACK_SE_PROCESS_EDGES);
         }
-        return priorityQueue;
+
+        return S;
     }
 
     /**
@@ -234,7 +218,7 @@ public class BetweennessCentralityCalculator
      */
     private double sigma(Vertex vertex)
     {
-        return sigmas.get(vertex);
+        return vertex.value(SIGMA_ATTRIBUTE_NAME);
     }
 
     /**
@@ -245,7 +229,7 @@ public class BetweennessCentralityCalculator
      */
     private double distance(Vertex vertex)
     {
-        return distances.get(vertex);
+        return vertex.value(DIST_ATTRIBUTE_NAME);
     }
 
     /**
@@ -256,7 +240,7 @@ public class BetweennessCentralityCalculator
      */
     private double delta(Vertex vertex)
     {
-        return deltas.get(vertex);
+        return vertex.value(DELTA_ATTRIBUTE_NAME);
     }
 
     /**
@@ -267,7 +251,7 @@ public class BetweennessCentralityCalculator
      */
     private double centrality(Vertex vertex)
     {
-        return centralities.get(vertex);
+        return vertex.value(PROPERTY_BETWEENNESS_CENTRALITY);
     }
 
     /**
@@ -279,7 +263,7 @@ public class BetweennessCentralityCalculator
     @SuppressWarnings("all")
     private Set<Vertex> predecessorsOf(Vertex vertex)
     {
-        return preds.get(vertex);
+        return (HashSet<Vertex>) vertex.value(PRED_ATTRIBUTE_NAME);
     }
 
     /**
@@ -290,7 +274,7 @@ public class BetweennessCentralityCalculator
      */
     private void setSigma(Vertex vertex, double sigma)
     {
-        sigmas.put(vertex, sigma);
+        vertex.property(SIGMA_ATTRIBUTE_NAME, sigma);
     }
 
     /**
@@ -301,7 +285,7 @@ public class BetweennessCentralityCalculator
      */
     private void setDistance(Vertex vertex, double distance)
     {
-        distances.put(vertex, distance);
+        vertex.property(DIST_ATTRIBUTE_NAME, distance);
     }
 
     /**
@@ -312,7 +296,7 @@ public class BetweennessCentralityCalculator
      */
     private void setDelta(Vertex vertex, double delta)
     {
-        deltas.put(vertex, delta);
+        vertex.property(DELTA_ATTRIBUTE_NAME, delta);
     }
 
     /**
@@ -323,7 +307,7 @@ public class BetweennessCentralityCalculator
      */
     private void setCentrality(Vertex vertex, double centrality)
     {
-        centralities.put(vertex, centrality);
+        vertex.property(PROPERTY_BETWEENNESS_CENTRALITY, centrality);
     }
 
 
@@ -336,18 +320,8 @@ public class BetweennessCentralityCalculator
     @SuppressWarnings("all")
     private void addToPredecessorsOf(Vertex vertex, Vertex predecessor)
     {
-        preds.get(vertex).add(predecessor);
-    }
-
-    /**
-     * Remove all predecessors of the given vertex.
-     *
-     * @param vertex Remove all predecessors of this vertex.
-     */
-    private void initPredecessorsOf(Vertex vertex)
-    {
-        HashSet<Vertex> set = new HashSet<>();
-        preds.put(vertex, set);
+        HashSet<Vertex> preds = (HashSet<Vertex>) vertex.value(PRED_ATTRIBUTE_NAME);
+        preds.add(predecessor);
     }
 
     /**
@@ -357,29 +331,36 @@ public class BetweennessCentralityCalculator
      */
     private void clearPredecessorsOf(Vertex vertex)
     {
-        preds.get(vertex).clear();
+        HashSet<Vertex> set = new HashSet<>();
+        vertex.property(PRED_ATTRIBUTE_NAME, set);
     }
-
 
     /**
      * Set a default centrality of 0 to all vertices.
+     *
+     * @param graph The graph to modify.
      */
-    private void initAllVertices()
+    private void initAllVertices(Graph graph)
     {
-        for (Vertex vertex : comps)
+        Iterator<Vertex> vertices = graph.vertices();
+        while (vertices.hasNext())
         {
+            Vertex vertex = vertices.next();
             setCentrality(vertex, 0.0);
-            initPredecessorsOf(vertex);
         }
     }
 
     /**
      * Add a default value for attributes used during computation.
+     *
+     * @param graph The graph to modify.
      */
-    private void setupAllVertices()
+    private void setupAllVertices(Graph graph)
     {
-        for (Vertex vertex : comps)
+        Iterator<Vertex> vertices = graph.vertices();
+        while (vertices.hasNext())
         {
+            Vertex vertex = vertices.next();
             clearPredecessorsOf(vertex);
             setSigma(vertex, 0.0);
             setDistance(vertex, INFINITY);
@@ -391,7 +372,7 @@ public class BetweennessCentralityCalculator
      * Increasing comparator used for priority queues.
      */
     private class BrandesvertexComparatorLargerFirst implements
-        Comparator<Vertex>
+            Comparator<Vertex>
     {
         public int compare(Vertex x, Vertex y)
         {
@@ -407,17 +388,5 @@ public class BetweennessCentralityCalculator
             return 0;
         }
     }
-
-    public List<Double> getBtwCentrVals()
-    {
-        List<Double> btwCentrVals = new ArrayList<>();
-        for (Vertex vertex : comps)
-        {
-            btwCentrVals.add(centralities.get(vertex));
-        }
-        return btwCentrVals;
-    }
-
-
 }
 

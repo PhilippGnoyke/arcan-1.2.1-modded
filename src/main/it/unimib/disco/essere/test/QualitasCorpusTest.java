@@ -281,7 +281,12 @@ public class QualitasCorpusTest {
     public void getNumberOfDependencesTest() {
         List<Vertex> classesVertex = GraphUtils.findVerticesByLabel(graph, GraphBuilder.CLASS);
         for (Vertex classVertex : classesVertex) {
-            int numDependences = classCalc.calculateFanIn(classVertex) + classCalc.calculateFanOut(classVertex);
+            try {
+                int numDependences = classCalc.calculateFanIn(classVertex) + classCalc.calculateFanOut(classVertex);
+            } catch (TypeVertexException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
 
         }
     }
@@ -320,7 +325,7 @@ public class QualitasCorpusTest {
         classCalc = new ClassMetricsCalculator(graph);
         UDDetector = new UnstableDependencyDetector(graph, packageCalc);
         HBDetector = new HubLikeDetector(graph, classCalc);
-        CDDetector = new CyclicDependencyDetector(graph, new File("empty"));
+        CDDetector = new CyclicDependencyDetector(graph, null);
         logger.debug("End setup");
 
         CDDetector.detect();

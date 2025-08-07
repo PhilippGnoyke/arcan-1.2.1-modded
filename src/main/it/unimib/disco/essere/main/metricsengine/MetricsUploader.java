@@ -1,13 +1,18 @@
 package it.unimib.disco.essere.main.metricsengine;
 
 import java.util.List;
-import java.util.Map;
 
-import it.unimib.disco.essere.main.graphmanager.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
+
+
+import it.unimib.disco.essere.main.graphmanager.GraphBuilder;
+import it.unimib.disco.essere.main.graphmanager.GraphUtils;
+import it.unimib.disco.essere.main.graphmanager.Neo4JGraphWriter;
+import it.unimib.disco.essere.main.graphmanager.TypeVertexException;
+
 
 
 public class MetricsUploader {
@@ -15,41 +20,32 @@ public class MetricsUploader {
     Graph graph;
     PackageMetricsCalculator mCalc;
     ClassMetricsCalculator cCalc;
-    private Map<String,Vertex> classes; // Modded
-    private Map<String,Vertex> packages; // Modded
-    private EdgeMaps edgeMaps; //Modded
+    private List<Vertex> classes; // Modded
+    private List<Vertex> packages; // Modded
 
     //Neo4JGraphWriter graphW;
 
     // Modded
-    public MetricsUploader(Graph graph, Map<String,Vertex> classes, Map<String,Vertex> packages, EdgeMaps edgeMaps) {
+    public MetricsUploader(Graph graph,List<Vertex> classes, List<Vertex> packages) {
         this.graph = graph;
         this.mCalc = new PackageMetricsCalculator(graph,classes,packages);
-        this.cCalc = new ClassMetricsCalculator(graph,classes, edgeMaps);
+        this.cCalc = new ClassMetricsCalculator(graph);
         //this.graphW = new Neo4JGraphWriter();
         this.classes = classes;
         this.packages = packages;
-        this.edgeMaps = edgeMaps;
     }
 
     public MetricsUploader(Graph graph) {
-        //Modded
-        List<Vertex> classList = GraphUtils.findVerticesByLabel(graph, GraphBuilder.CLASS);
-        List<Vertex> packageList = GraphUtils.findVerticesByLabel(graph, GraphBuilder.PACKAGE);
-        for (Vertex vertex : classList) {
-            classes.put(vertex.value(GraphBuilder.PROPERTY_NAME), vertex);
-        }
-        for (Vertex vertex : packageList) {
-            packages.put(vertex.value(GraphBuilder.PROPERTY_NAME), vertex);
-        }
+        this.classes = GraphUtils.findVerticesByLabel(graph, GraphBuilder.CLASS); // Modded
+        this.packages = GraphUtils.findVerticesByLabel(graph, GraphBuilder.PACKAGE); // Modded
         this.graph = graph;
         this.mCalc = new PackageMetricsCalculator(graph,classes,packages);
-        this.cCalc = new ClassMetricsCalculator(graph,classes,edgeMaps);
+        this.cCalc = new ClassMetricsCalculator(graph);
         //this.graphW = new Neo4JGraphWriter();
     }
 
     public void updateInstability() throws TypeVertexException {
-        for(Vertex p : packages.values()){
+        for(Vertex p : packages){
             double instability = mCalc.calculateInstability(p);
             p.property(GraphBuilder.PROPERTY_INSTABILITY, instability);
         } 

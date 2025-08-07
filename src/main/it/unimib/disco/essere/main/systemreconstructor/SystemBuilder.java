@@ -2,7 +2,6 @@ package it.unimib.disco.essere.main.systemreconstructor;
 
 import java.util.*;
 
-import it.unimib.disco.essere.main.ExTimeLogger;
 import it.unimib.disco.essere.main.graphmanager.ClassFilter;
 import org.apache.bcel.util.Repository;
 import org.apache.bcel.classfile.JavaClass;
@@ -13,9 +12,6 @@ public abstract class SystemBuilder {
 	private Set<String> extClasses;
 	private Set<String> extPackages;
 	protected Repository repo;
-	protected ExTimeLogger exTimeLogger;
-
-
 	protected ClassFilter classFilter;
 
 	public HashMap<String,JavaClass> getClassesHashMap() {
@@ -57,10 +53,9 @@ public abstract class SystemBuilder {
 		extPackages = new HashSet<>();
 	}
 
-	protected SystemBuilder(ClassFilter classFilter, ExTimeLogger exTimeLogger, Repository repo) {
+	protected SystemBuilder(ClassFilter classFilter, Repository repo) {
 		this();
 		this.classFilter = classFilter;
-		this.exTimeLogger = exTimeLogger;
 		this.repo = repo;
 	}
 

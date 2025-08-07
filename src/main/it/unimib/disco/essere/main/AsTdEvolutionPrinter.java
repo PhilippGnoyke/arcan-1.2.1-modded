@@ -1,7 +1,7 @@
 package it.unimib.disco.essere.main;
 
-import it.unimib.disco.essere.main.graphmanager.EdgeMaps;
 import it.unimib.disco.essere.main.graphmanager.GraphBuilder;
+import it.unimib.disco.essere.main.graphmanager.GraphUtils;
 import it.unimib.disco.essere.main.metricsengine.ProjectMetricsCalculator;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
@@ -60,13 +60,10 @@ public class AsTdEvolutionPrinter
     private List<Vertex> hds;
     private List<Vertex> uds;
     private ExTimeLogger exTimeLogger;
-    private EdgeMaps edgeMaps; // Modded
-    private List<CSVPrinter> printers;
-    private List<FileWriter> writers;
 
     public AsTdEvolutionPrinter(OutputDirUtils outputDirUtils, ProjectMetricsCalculator projectMetricsCalculator,
                                 List<Vertex> classSupercycles, List<Vertex> packSupercycles,
-                                List<Vertex> hds, List<Vertex> uds, ExTimeLogger exTimeLogger, EdgeMaps edgeMaps)
+                                List<Vertex> hds, List<Vertex> uds, ExTimeLogger exTimeLogger)
     {
         this.outputDirUtils = outputDirUtils;
         this.projectMetricsCalculator = projectMetricsCalculator;
@@ -75,9 +72,6 @@ public class AsTdEvolutionPrinter
         this.classSupercycles = classSupercycles;
         this.packSupercycles = packSupercycles;
         this.exTimeLogger = exTimeLogger;
-        this.edgeMaps = edgeMaps;
-        printers = new ArrayList<>();
-        writers = new ArrayList<>();
     }
 
     public void printAll() throws IOException, NullPointerException
@@ -89,19 +83,6 @@ public class AsTdEvolutionPrinter
         printUds();
         exTimeLogger.logEventEnd(ETLE.Event.ARCAN_PRINTING);
         printExTimeLogs();
-        closeAll();
-    }
-
-    private void closeAll() throws IOException
-    {
-        for(CSVPrinter printer : printers)
-        {
-            printer.close();
-        }
-        for(FileWriter writer : writers)
-        {
-            writer.close();
-        }
     }
 
     private void printCore(String file, String[] headers, PrinterCore printerCore) throws IOException, NullPointerException
@@ -116,8 +97,8 @@ public class AsTdEvolutionPrinter
         FileWriter writer = new FileWriter(fileCsv);
         CSVPrinter printer = new CSVPrinter(writer, formatter);
         printerCore.print(headers, printer);
-        printers.add(printer);
-        writers.add(writer);
+        printer.close();
+        writer.close();
     }
 
     private static String[] mergeStringArrays(String[]... arrays)
@@ -549,7 +530,7 @@ public class AsTdEvolutionPrinter
         printer.print(compNames);
     }
 
-    private void printCdEdgesCore(CSVPrinter printer, Vertex supercycle, String depLabel) throws IOException
+    private static void printCdEdgesCore(CSVPrinter printer, Vertex supercycle, String depLabel) throws IOException
     {
         Iterator<Edge> compEdges = supercycle.edges(Direction.OUT, GraphBuilder.LABEL_SUPERCYCLE_AFFECTED);
 
@@ -565,7 +546,7 @@ public class AsTdEvolutionPrinter
             size++;
         }
 
-        List<Edge> depEdges = edgeMaps.getSuperCycleEdges(supercycle);
+        List<Edge> depEdges = GraphUtils.allEdgesBetweenVertices(new HashSet<>(affected), depLabel);
         boolean[][] edgeMatrix = new boolean[size][size];
 
         for (Edge edge : depEdges)

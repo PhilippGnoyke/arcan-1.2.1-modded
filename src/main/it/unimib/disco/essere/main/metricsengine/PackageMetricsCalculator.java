@@ -4,10 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
-import org.apache.commons.math3.ml.neuralnet.MapUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tinkerpop.gremlin.structure.Direction;
@@ -25,33 +22,29 @@ import it.unimib.disco.essere.main.graphmanager.TypeVertexException;
 public class PackageMetricsCalculator {
     private static final Logger logger = LogManager.getLogger(PackageMetricsCalculator.class);
     private Graph graph;
-    private Map<String,Vertex> packages; // Modded
-    private Map<String,Vertex> classes; // Modded
+    private List<Vertex> packages; // Modded
+    private List<Vertex> classes; // Modded
 
-    //Modded
-    public PackageMetricsCalculator(Graph graph, Map<String,Vertex> classes, Map<String,Vertex> packages) {
+    public List<Vertex> getPackages() {
+        return packages;
+    }
+
+    public PackageMetricsCalculator(Graph graph, List<Vertex> classes, List<Vertex> packages) {
         this.graph = graph;
         this.classes = classes;
         this.packages = packages;
     }
 
-    //Modded
     public PackageMetricsCalculator(Graph graph) {
         this.graph = graph;
-        List<Vertex> classList = GraphUtils.findVerticesByLabel(graph, GraphBuilder.CLASS);
-        List<Vertex> packageList = GraphUtils.findVerticesByLabel(graph, GraphBuilder.PACKAGE);
-        for (Vertex vertex : classList) {
-            classes.put(vertex.value(GraphBuilder.PROPERTY_NAME), vertex);
-        }
-        for (Vertex vertex : packageList) {
-            packages.put(vertex.value(GraphBuilder.PROPERTY_NAME), vertex);
-        }
+        this.classes = GraphUtils.findVerticesByLabel(graph, GraphBuilder.CLASS);
+        this.packages = GraphUtils.findVerticesByLabel(graph, GraphBuilder.PACKAGE);
     }
 
 
     public int calculateNumberOfInterfaces() {
         int numberOfInterfaces = 0;
-        for (Vertex v : classes.values()) {
+        for (Vertex v : classes) {
             if (v.property(GraphBuilder.PROPERTY_CLASS_MODIFIER).value().toString().equals(GraphBuilder.INTERFACE)) {
                 ++numberOfInterfaces;
             }
@@ -71,8 +64,7 @@ public class PackageMetricsCalculator {
     }
     
     public int calculateAfferentClasses(String packageVertex) throws TypeVertexException{
-        Vertex pkg = packages.get(packageVertex); // modded
-        //Vertex pkg = GraphUtils.findVertex(graph, packageVertex,GraphBuilder.PACKAGE);
+        Vertex pkg = GraphUtils.findVertex(graph, packageVertex,GraphBuilder.PACKAGE);
         int afferent = calculateAfferentClasses(pkg);
         pkg.property(GraphBuilder.PROPERTY_CA, afferent);
         return afferent;
@@ -89,8 +81,7 @@ public class PackageMetricsCalculator {
     }
     
     public int calculateEfferentClasses(String packageVertex) throws TypeVertexException{
-        Vertex pkg = packages.get(packageVertex); // modded
-        //Vertex pkg = GraphUtils.findVertex(graph, packageVertex,GraphBuilder.PACKAGE);
+        Vertex pkg = GraphUtils.findVertex(graph, packageVertex,GraphBuilder.PACKAGE);
         int efferent = calculateEfferentClasses(pkg);
         pkg.property(GraphBuilder.PROPERTY_CE, efferent);
         return efferent;
@@ -109,8 +100,7 @@ public class PackageMetricsCalculator {
     }
     
     public int calculateInternalEfferentClasses(String packageVertex) throws TypeVertexException{
-        Vertex pkg = packages.get(packageVertex); // modded
-        //Vertex pkg = GraphUtils.findVertex(graph, packageVertex,GraphBuilder.PACKAGE);
+        Vertex pkg = GraphUtils.findVertex(graph, packageVertex,GraphBuilder.PACKAGE);
         int efferent = calculateInternalEfferentClasses(pkg);
         pkg.property(GraphBuilder.PROPERTY_CE_INTERNAL, efferent);
         return calculateInternalEfferentClasses(pkg);
@@ -133,8 +123,7 @@ public class PackageMetricsCalculator {
     }
     
     public double calculateInstability(String packageVertex) throws TypeVertexException{
-        Vertex pkg = packages.get(packageVertex); // modded
-        //Vertex pkg = GraphUtils.findVertex(graph, packageVertex,GraphBuilder.PACKAGE);
+        Vertex pkg = GraphUtils.findVertex(graph, packageVertex,GraphBuilder.PACKAGE);
         double instability = calculateInstability(pkg);
         pkg.property(GraphBuilder.PROPERTY_INSTABILITY, instability);
         return instability;
@@ -153,8 +142,7 @@ public class PackageMetricsCalculator {
     }
     
     public double calculateInternalInstability(String packageVertex) throws TypeVertexException{
-        Vertex pkg = packages.get(packageVertex); // modded
-        //Vertex pkg = GraphUtils.findVertex(graph, packageVertex,GraphBuilder.PACKAGE);
+        Vertex pkg = GraphUtils.findVertex(graph, packageVertex,GraphBuilder.PACKAGE);
         double instability = calculateInternalInstability(pkg);
         pkg.property(GraphBuilder.PROPERTY_INSTABILITY_INTERNAL, instability);
         return instability;
@@ -191,8 +179,7 @@ public class PackageMetricsCalculator {
     }
     
     public double calculateAbstractness(String packageVertex) throws TypeVertexException{
-        Vertex pkg = packages.get(packageVertex); // modded
-        //Vertex pkg = GraphUtils.findVertex(graph, packageVertex,GraphBuilder.PACKAGE);
+        Vertex pkg = GraphUtils.findVertex(graph, packageVertex,GraphBuilder.PACKAGE);
         double rma = calculateAbstractness(pkg);
         pkg.property(GraphBuilder.PROPERTY_RMA, rma);
         return rma;
@@ -212,8 +199,7 @@ public class PackageMetricsCalculator {
     }
     
     public double calculateDistanceFromTheMainSequence(String packageVertex) throws TypeVertexException{
-        Vertex pkg = packages.get(packageVertex); // modded
-        //Vertex pkg = GraphUtils.findVertex(graph, packageVertex,GraphBuilder.PACKAGE);
+        Vertex pkg = GraphUtils.findVertex(graph, packageVertex,GraphBuilder.PACKAGE);
         double rmd = calculateDistanceFromTheMainSequence(pkg);
         pkg.property(GraphBuilder.PROPERTY_RMD, rmd);
         return rmd;
@@ -226,7 +212,7 @@ public class PackageMetricsCalculator {
     public Map<String, Double> calculatePackagesInstability() throws TypeVertexException {
         Map<String, Double> instabilityMap = new HashMap<>();
 
-        for (Vertex v : packages.values()) {
+        for (Vertex v : packages) {
             instabilityMap.put(v.property(GraphBuilder.PROPERTY_NAME).value().toString(), calculateInstability(v));
         }
         return instabilityMap;
@@ -266,8 +252,7 @@ public class PackageMetricsCalculator {
     }
     
     public double[] calculatePackageMetrics(String packageVertex) throws TypeVertexException{
-        Vertex pkg = packages.get(packageVertex); // modded
-        //Vertex pkg = GraphUtils.findVertex(graph, packageVertex,GraphBuilder.PACKAGE);
+        Vertex pkg = GraphUtils.findVertex(graph, packageVertex,GraphBuilder.PACKAGE);
         return calculatePackageMetrics(pkg);
     }
 
@@ -290,8 +275,7 @@ public class PackageMetricsCalculator {
     }
     
     public double[] calculateInternalPackageMetrics(String packageVertex) throws TypeVertexException{
-        Vertex pkg = packages.get(packageVertex); // modded
-        //Vertex pkg = GraphUtils.findVertex(graph, packageVertex,GraphBuilder.PACKAGE);
+        Vertex pkg = GraphUtils.findVertex(graph, packageVertex,GraphBuilder.PACKAGE);
         return calculateInternalPackageMetrics(pkg);
     }
 

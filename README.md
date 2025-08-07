@@ -14,4 +14,4 @@ This a modified version of [Arcan](https://gitlab.com/essere.lab.public/arcan). 
 This modification is intended to be used along with [AsTdEA](https://github.com/PhilippGnoyke/AsTdEA) and thus included in its installation.
 
 ## Usage
-This modification is controlled by AsTdEA and does not require direct human input. See the [readme of AsTdEA](https://github.com/PhilippGnoyke/AsTdEA/blob/master/README.md) for detailed instructions.
+This modification is controlled by AsTdEA and does not require direct human input.

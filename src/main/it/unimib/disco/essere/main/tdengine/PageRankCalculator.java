@@ -5,37 +5,29 @@ import it.unimib.disco.essere.main.graphmanager.GraphUtils;
 import it.unimib.disco.essere.main.graphmanager.PropertyEdge;
 import org.apache.tinkerpop.gremlin.structure.*;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 // Modded from here
 public class PageRankCalculator
 {
     private static final double DAMP = 0.85;
-    private static final double PR_CHANGE_STOP_TR = 0.0001;
-    private static final int MAX_ITERS = 30;
+    private static final double PR_CHANGE_STOP_TR = 0.0000001;
+    private static final int MAX_ITERS = 50;
     private static final int LEVEL_CLASS = 0;
     private static final int LEVEL_PACKAGE = 1;
 
-    private Map<Vertex, Double> centralities;
-
-    public PageRankCalculator()
-    {
-        centralities = new HashMap<>();
-    }
-
-    public boolean calculateAllPrVals(Map<String, Vertex> classes, Map<String, Vertex> packages)
+    public static boolean calculateAllPrVals(Graph graph)
     {
         boolean result;
-        result = prCalcCore(classes, LEVEL_CLASS);
-        result &= prCalcCore(packages, LEVEL_PACKAGE);
+        result = prCalcCore(graph, LEVEL_CLASS);
+        result &= prCalcCore(graph, LEVEL_PACKAGE);
         return result;
     }
 
-    private boolean prCalcCore(Map<String, Vertex> components, int level)
+    private static boolean prCalcCore(Graph graph, int level)
     {
+        String vertexLabel;
         String dependencyLabel;
         String couplingLabel;
 
@@ -43,10 +35,12 @@ public class PageRankCalculator
         {
             case LEVEL_CLASS:
             default:
+                vertexLabel = GraphBuilder.CLASS;
                 dependencyLabel = GraphBuilder.LBL_CLASS_DEP;
                 couplingLabel = GraphBuilder.PROPERTY_FANOUT;
                 break;
             case LEVEL_PACKAGE:
+                vertexLabel = GraphBuilder.PACKAGE;
                 dependencyLabel = GraphBuilder.LBL_PACK_DEP;
                 couplingLabel = GraphBuilder.PROPERTY_NUM_TOTAL_DEPENDENCIES;
                 break;
@@ -56,15 +50,16 @@ public class PageRankCalculator
         int smellCount = 1; // Seems to correspond to Table 7.3 of Roveda
         double initPageRank = (1 - DAMP) / smellCount;
 
-        if (components.size() == 0)
+        List<Vertex> vertices = GraphUtils.findVerticesByLabel(graph, vertexLabel);
+        if (vertices == null)
         {
             return true;
         }
 
         // Init PageRank
-        for (Vertex node : components.values())
+        for (Vertex node : vertices)
         {
-            centralities.put(node, initPageRank);
+            node.property(GraphBuilder.PROPERTY_CENTRALITY, initPageRank);
         }
 
         double highestPrChange;
@@ -72,10 +67,10 @@ public class PageRankCalculator
         do
         {
             highestPrChange = 0;
-            for (Vertex node : components.values())
+            for (Vertex node : vertices)
             {
                 double pageRank = initPageRank;
-                double previousPr = centralities.get(node);
+                double previousPr = node.value(GraphBuilder.PROPERTY_CENTRALITY);
                 Iterator<Edge> edgesIn = node.edges(Direction.IN, dependencyLabel);
 
                 while (edgesIn.hasNext())
@@ -83,23 +78,16 @@ public class PageRankCalculator
                     Edge edge = edgesIn.next();
                     Vertex depNode = edge.outVertex();
                     int depCount = depNode.value(couplingLabel);
-                    double depPr = centralities.get(depNode);
+                    double depPr = depNode.value(GraphBuilder.PROPERTY_CENTRALITY);
                     pageRank += (DAMP * depPr / depCount);
                 }
-
-                centralities.put(node, pageRank);
-
+                node.property(GraphBuilder.PROPERTY_CENTRALITY, pageRank);
                 double prChange = Math.abs(pageRank - previousPr);
                 highestPrChange = Math.max(highestPrChange, prChange);
             }
             iterCount++;
         }
         while (highestPrChange > PR_CHANGE_STOP_TR && iterCount < MAX_ITERS);
-        for (Vertex node : components.values())
-        {
-            node.property(GraphBuilder.PROPERTY_CENTRALITY, centralities.get(node));
-        }
-
         return true;
     }
 }

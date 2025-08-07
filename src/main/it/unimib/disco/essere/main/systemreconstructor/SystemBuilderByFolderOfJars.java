@@ -7,8 +7,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.stream.Stream;
 
-import it.unimib.disco.essere.main.ETLE;
-import it.unimib.disco.essere.main.ExTimeLogger;
 import it.unimib.disco.essere.main.graphmanager.ClassFilter;
 import org.apache.bcel.util.Repository;
 import org.apache.bcel.classfile.ClassParser;
@@ -22,9 +20,9 @@ public class SystemBuilderByFolderOfJars extends SystemBuilder {
 
     private SystemBuilderByJar jarSys;
 
-    public SystemBuilderByFolderOfJars(ClassFilter classFilter, ExTimeLogger exTimeLogger, Repository repo) {
-        super(classFilter,exTimeLogger,repo);
-        jarSys = new SystemBuilderByJar(classFilter, exTimeLogger,repo);
+    public SystemBuilderByFolderOfJars(ClassFilter classFilter, Repository repo) {
+        super(classFilter,repo);
+        jarSys = new SystemBuilderByJar(classFilter,repo);
     }
 
     public SystemBuilderByFolderOfJars() {
@@ -34,7 +32,6 @@ public class SystemBuilderByFolderOfJars extends SystemBuilder {
 
     @Override
     public void readClass(String url) {
-        exTimeLogger.logEventStart(ETLE.Event.READ_WALK_JARS);
         this.getClasses().clear();
         this.getPackages().clear();
         
@@ -59,15 +56,5 @@ public class SystemBuilderByFolderOfJars extends SystemBuilder {
         } catch (IOException e) {
             logger.debug(e.getMessage());
         }
-        exTimeLogger.logEventEnd(ETLE.Event.READ_WALK_JARS);
-        ETLE.Event[] toBeSubtracted = new ETLE.Event[]{
-            ETLE.Event.READ_READ_BYTES,
-            ETLE.Event.READ_INIT_IN_STREAMS,
-            ETLE.Event.READ_GET_JAR_ENTRY,
-            ETLE.Event.READ_INIT_OUT_STREAMS,
-            ETLE.Event.READ_PARSE_CLASS,
-            ETLE.Event.READ_ADD_TO_REPO,
-            ETLE.Event.READ_ADD_TO_LISTS};
-        exTimeLogger.subtractEventsFromEvent(ETLE.Event.READ_WALK_JARS,toBeSubtracted);
     }
 }
