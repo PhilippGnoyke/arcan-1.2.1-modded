@@ -9,9 +9,10 @@ This a modified version of [Arcan](https://gitlab.com/essere.lab.public/arcan). 
 * Added the calculation of several new metrics.
 * Adapted the printed output files to the data required by AsTdEA.
 * Modified data flow to enable multi-threaded usage and to increase efficiency by reducing repeated graph traversals.
+* Major optimization: Reduced runtime complexity from a quadratic to a linear trend in relation to the input size (classes, packages, dependency edges)
 
 ## Installation
 This modification is intended to be used along with [AsTdEA](https://github.com/PhilippGnoyke/AsTdEA) and thus included in its installation.
 
 ## Usage
-This modification is controlled by AsTdEA and does not require direct human input. See the [readme of AsTdEA](https://github.com/PhilippGnoyke/AsTdEA/blob/master/README.md) for detailed instructions.
+This modification is controlled by AsTdEA and does not require direct human input. See the [readme of AsTdEA](https://github.com/PhilippGnoyke/AsTdEA/blob/master/README.md) for detailed instructions and a breakdown of all metrics.
