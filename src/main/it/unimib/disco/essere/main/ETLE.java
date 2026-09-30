@@ -40,11 +40,11 @@ public final class ETLE
         PRT_CLASS_CDS_PROPS,
         PRT_CLASS_CDS_COMPS,
         PRT_CLASS_CDS_EDGES,
-        PRT_CLASS_CDS_MEFS,
+        PRT_CLASS_CDS_MFES,
         PRT_PACK_CDS_PROPS,
         PRT_PACK_CDS_COMPS,
         PRT_PACK_CDS_EDGES,
-        PRT_PACK_CDS_MEFS,
+        PRT_PACK_CDS_MFES,
         PRT_HDS_PROPS,
         PRT_HDS_COMPS,
         PRT_UDS_PROPS,
@@ -55,8 +55,8 @@ public final class ETLE
         CDS_SUPERCYLE_PACK_CD_SHAPE,
         CDS_SUBCYCLE_CLASS_CD_DETECTION,
         CDS_SUBCYCLE_PACK_CD_DETECTION,
-        CDS_SUPERCYCLE_CLASS_CD_MEFS,
-        CDS_SUPERCYCLE_PACK_CD_MEFS,
+        CDS_SUPERCYCLE_CLASS_CD_MFES,
+        CDS_SUPERCYCLE_PACK_CD_MFES,
         CLASS_CD_SHAPES_BACKREF,
         CLASS_CD_SHAPES_CHAIN,
         CLASS_CD_SHAPES_STAR,
@@ -139,11 +139,11 @@ public final class ETLE
             case PRT_CLASS_CDS_PROPS -> {return "Class-level cyclic-dependency properties printing";}
             case PRT_CLASS_CDS_COMPS -> {return "Class-level cyclic-dependency components printing";}
             case PRT_CLASS_CDS_EDGES -> {return "Class-level cyclic-dependency edges printing";}
-            case PRT_CLASS_CDS_MEFS -> {return "Class-level cyclic-dependency minimum edge feedback set printing";}
+            case PRT_CLASS_CDS_MFES -> {return "Class-level cyclic-dependency minimum feedback edge set printing";}
             case PRT_PACK_CDS_PROPS -> {return "Package-level cyclic-dependency properties printing";}
             case PRT_PACK_CDS_COMPS -> {return "Package-level cyclic-dependency components printing";}
             case PRT_PACK_CDS_EDGES -> {return "Package-level cyclic-dependency edges printing";}
-            case PRT_PACK_CDS_MEFS -> {return "Package-level cyclic-dependency minimum edge feedback set printing";}
+            case PRT_PACK_CDS_MFES -> {return "Package-level cyclic-dependency minimum feedback edge set printing";}
             case PRT_HDS_PROPS -> {return "Hub-like dependency properties printing";}
             case PRT_HDS_COMPS -> {return "Hub-like dependency components printing";}
             case PRT_UDS_PROPS -> {return "Unstable dependency properties printing";}
@@ -154,8 +154,8 @@ public final class ETLE
             case CDS_SUPERCYLE_PACK_CD_SHAPE -> {return "Package-level supercycle shape assignment";}
             case CDS_SUBCYCLE_CLASS_CD_DETECTION -> {return "Class-level subcycle detection";}
             case CDS_SUBCYCLE_PACK_CD_DETECTION -> {return "Package-level subcycle detection";}
-            case CDS_SUPERCYCLE_CLASS_CD_MEFS -> {return "Class-level supercycle MEFS calculation";}
-            case CDS_SUPERCYCLE_PACK_CD_MEFS -> {return "Package-level subcycle MEFS calculation";}
+            case CDS_SUPERCYCLE_CLASS_CD_MFES -> {return "Class-level supercycle MFES calculation";}
+            case CDS_SUPERCYCLE_PACK_CD_MFES -> {return "Package-level subcycle MFES calculation";}
             case CLASS_CD_SHAPES_BACKREF -> {return "Class-level supercycle shape classification: Backref calculation";}
             case CLASS_CD_SHAPES_CHAIN -> {return "Class-level supercycle shape classification: Chain determination";}
             case CLASS_CD_SHAPES_STAR -> {return "Class-level supercycle shape classification: Star determination";}
@@ -246,11 +246,11 @@ public final class ETLE
             case PRT_CLASS_CDS_PROPS -> {return Event.ARCAN_PRINTING;}
             case PRT_CLASS_CDS_COMPS -> {return Event.ARCAN_PRINTING;}
             case PRT_CLASS_CDS_EDGES -> {return Event.ARCAN_PRINTING;}
-            case PRT_CLASS_CDS_MEFS -> {return Event.ARCAN_PRINTING;}
+            case PRT_CLASS_CDS_MFES -> {return Event.ARCAN_PRINTING;}
             case PRT_PACK_CDS_PROPS -> {return Event.ARCAN_PRINTING;}
             case PRT_PACK_CDS_COMPS -> {return Event.ARCAN_PRINTING;}
             case PRT_PACK_CDS_EDGES -> {return Event.ARCAN_PRINTING;}
-            case PRT_PACK_CDS_MEFS -> {return Event.ARCAN_PRINTING;}
+            case PRT_PACK_CDS_MFES -> {return Event.ARCAN_PRINTING;}
             case PRT_HDS_PROPS -> {return Event.ARCAN_PRINTING;}
             case PRT_HDS_COMPS -> {return Event.ARCAN_PRINTING;}
             case PRT_UDS_PROPS -> {return Event.ARCAN_PRINTING;}
@@ -261,8 +261,8 @@ public final class ETLE
             case CDS_SUPERCYLE_PACK_CD_SHAPE -> {return Event.CD_DETECTION;}
             case CDS_SUBCYCLE_CLASS_CD_DETECTION -> {return Event.CD_DETECTION;}
             case CDS_SUBCYCLE_PACK_CD_DETECTION -> {return Event.CD_DETECTION;}
-            case CDS_SUPERCYCLE_CLASS_CD_MEFS -> {return Event.CD_DETECTION;}
-            case CDS_SUPERCYCLE_PACK_CD_MEFS -> {return Event.CD_DETECTION;}
+            case CDS_SUPERCYCLE_CLASS_CD_MFES -> {return Event.CD_DETECTION;}
+            case CDS_SUPERCYCLE_PACK_CD_MFES -> {return Event.CD_DETECTION;}
             case CLASS_CD_SHAPES_BACKREF -> {return Event.CDS_SUPERCYLE_CLASS_CD_SHAPE;}
             case CLASS_CD_SHAPES_CHAIN -> {return Event.CDS_SUPERCYLE_CLASS_CD_SHAPE;}
             case CLASS_CD_SHAPES_STAR -> {return Event.CDS_SUPERCYLE_CLASS_CD_SHAPE;}

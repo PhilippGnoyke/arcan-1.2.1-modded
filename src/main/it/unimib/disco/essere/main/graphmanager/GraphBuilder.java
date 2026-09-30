@@ -52,13 +52,13 @@ public class GraphBuilder
     public static final String PROPERTY_REL_NUM_INHERIT_EDGES = "relNumInheritEdges"; // Modded
     public static final String PROPERTY_BACKREF_SHARE = "backrefShare"; // Modded
     public static final String PROPERTY_DENSITY = "density"; // Modded
-    public static final String PROPERTY_MEFS_SIZE = "mEFSSize"; // Modded
-    public static final String PROPERTY_MEFS_SIZE_WO_TINYS = "mEFSSizeWOTinys"; // Modded
-    public static final String PROPERTY_MEFS = "mEFS"; // Modded
-    public static final String PROPERTY_MEFS_WO_TINYS = "mEFSWOTinys"; // Modded
-    public static final String PROPERTY_REL_MEFS_SIZE = "relmEFS"; // Modded
-    public static final String PROPERTY_REL_MEFS_SIZE_WO_TINYS = "relmEFSWOTinys"; // Modded
-    public static final String PROPERTY_REL_MEFS_SIZE_WO_TINYS_REDUCTION = "mEFSWOTinysReduction"; // Modded
+    public static final String PROPERTY_MFES_SIZE = "mfesSize"; // Modded
+    public static final String PROPERTY_MFES_SIZE_WO_TINYS = "mfesSizeWOTinys"; // Modded
+    public static final String PROPERTY_MFES = "mfes"; // Modded
+    public static final String PROPERTY_MFES_WO_TINYS = "mfesWOTinys"; // Modded
+    public static final String PROPERTY_REL_MFES_SIZE = "relMfes"; // Modded
+    public static final String PROPERTY_REL_MFES_SIZE_WO_TINYS = "relMfesWOTinys"; // Modded
+    public static final String PROPERTY_REL_MFES_SIZE_WO_TINYS_REDUCTION = "mfesWOTinysReduction"; // Modded
 
     public static final String PROPERTY_NUM_PACKAGES = "numPackages"; // Modded
     public static final String PROPERTY_SHARE_CLASSES = "shareClassesInVersion"; // Modded

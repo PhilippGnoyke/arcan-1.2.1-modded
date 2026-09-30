@@ -6,7 +6,7 @@ import it.unimib.disco.essere.main.asengine.CyclicDependencyDetector;
 import it.unimib.disco.essere.main.asengine.cycleutils.CDFilterUtils;
 import it.unimib.disco.essere.main.asengine.cycleutils.SuperCycleShapeClassifier;
 import it.unimib.disco.essere.main.graphmanager.*;
-import it.unimib.disco.essere.main.metricsengine.MEFSCalculator;
+import it.unimib.disco.essere.main.metricsengine.MFESCalculator;
 import it.unimib.disco.essere.main.metricsengine.MiscSmellMetricsCalculator;
 import org.apache.tinkerpop.gremlin.structure.*;
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
@@ -196,24 +196,24 @@ public class TarjansAlgorithm
         calcInheritEdges(supercycle, comps, size);
         assignSubCycles(supercycle, new HashSet<>(comps.values()));
         assignShape(supercycle, comps, edges, order, size);
-        calcMEFS(supercycle, compsList, edges);
+        calcMFES(supercycle, compsList, edges);
         return supercycle;
     }
 
-    public void calcMEFS(Vertex smell, List<Vertex> comps, List<Edge> edges)
+    public void calcMFES(Vertex smell, List<Vertex> comps, List<Edge> edges)
     {
         exTimeLogger.logEventStart(vertexType.equals(GraphBuilder.CLASS) ?
-            ETLE.Event.CDS_SUPERCYCLE_CLASS_CD_MEFS : ETLE.Event.CDS_SUPERCYCLE_PACK_CD_MEFS);
-        MEFSCalculator mefsCalculator = new MEFSCalculator(new HashSet<>(comps), edges);
-        smell.property(GraphBuilder.PROPERTY_MEFS_SIZE, mefsCalculator.getMEFSSize());
-        smell.property(GraphBuilder.PROPERTY_REL_MEFS_SIZE, mefsCalculator.getRelativeMEFSSize());
-        smell.property(GraphBuilder.PROPERTY_MEFS, mefsCalculator.getEdgeFeedbackSet());
-        smell.property(GraphBuilder.PROPERTY_MEFS_SIZE_WO_TINYS, mefsCalculator.getMEFSSizeWOTinys());
-        smell.property(GraphBuilder.PROPERTY_REL_MEFS_SIZE_WO_TINYS, mefsCalculator.getRelativeMEFSSizeWOTinys());
-        smell.property(GraphBuilder.PROPERTY_MEFS_WO_TINYS, mefsCalculator.getEdgeFeedbackSetWOTinys());
-        smell.property(GraphBuilder.PROPERTY_REL_MEFS_SIZE_WO_TINYS_REDUCTION, mefsCalculator.getMEFSSizeWOTinysReduction());
+            ETLE.Event.CDS_SUPERCYCLE_CLASS_CD_MFES : ETLE.Event.CDS_SUPERCYCLE_PACK_CD_MFES);
+        MFESCalculator mfesCalculator = new MFESCalculator(new HashSet<>(comps), edges);
+        smell.property(GraphBuilder.PROPERTY_MFES_SIZE, mfesCalculator.getMFESSize());
+        smell.property(GraphBuilder.PROPERTY_REL_MFES_SIZE, mfesCalculator.getRelativeMFESSize());
+        smell.property(GraphBuilder.PROPERTY_MFES, mfesCalculator.getEdgeFeedbackSet());
+        smell.property(GraphBuilder.PROPERTY_MFES_SIZE_WO_TINYS, mfesCalculator.getMFESSizeWOTinys());
+        smell.property(GraphBuilder.PROPERTY_REL_MFES_SIZE_WO_TINYS, mfesCalculator.getRelativeMFESSizeWOTinys());
+        smell.property(GraphBuilder.PROPERTY_MFES_WO_TINYS, mfesCalculator.getEdgeFeedbackSetWOTinys());
+        smell.property(GraphBuilder.PROPERTY_REL_MFES_SIZE_WO_TINYS_REDUCTION, mfesCalculator.getMFESSizeWOTinysReduction());
         exTimeLogger.logEventEnd(vertexType.equals(GraphBuilder.CLASS) ?
-            ETLE.Event.CDS_SUPERCYCLE_CLASS_CD_MEFS : ETLE.Event.CDS_SUPERCYCLE_PACK_CD_MEFS);
+            ETLE.Event.CDS_SUPERCYCLE_CLASS_CD_MFES : ETLE.Event.CDS_SUPERCYCLE_PACK_CD_MFES);
     }
 
 

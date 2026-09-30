@@ -200,7 +200,7 @@ public class ToySystemTest {
 
     @Test
     public void calculateLCOMTest() {
-        classCalc.calculateLCOM(sys.getClasses().get(4));
+        classCalc.calculateLCOM(sys.getClasses().iterator().next());
     }
     
     @Test

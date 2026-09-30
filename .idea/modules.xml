@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/arcan-1.2.1-modded.iml" filepath="$PROJECT_DIR$/.idea/arcan-1.2.1-modded.iml" />
+      <module fileurl="file://$PROJECT_DIR$/arcan-1.2.1-modded.iml" filepath="$PROJECT_DIR$/arcan-1.2.1-modded.iml" />
     </modules>
   </component>
 </project>

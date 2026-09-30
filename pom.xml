@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>it.unimib.disco.essere</groupId>
-	<artifactId>arcan</artifactId>
+	<artifactId>arcan-1.2.1-modded</artifactId>
 	<version>1.2.1</version>
 
 	<name>${project.groupId}:${project.artifactId}</name>
@@ -50,13 +50,13 @@
 		<repository>
 			<id>org.apache</id>
 			<name>alfresco</name>
-			<url>http://maven.alfresco.com/nexus/content/repositories/public/</url>
+			<url>https://maven.alfresco.com/nexus/content/repositories/public/</url>
 			<layout>default</layout>
 		</repository>
 		<repository>
 			<id>com.gitblit</id>
 			<name>Gitblit</name>
-			<url>http://gitblit.github.io/gitblit-maven/</url>
+			<url>https://gitblit.github.io/gitblit-maven/</url>
 			<layout>default</layout>
 		</repository>
 	</repositories>
@@ -95,9 +95,6 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-dependency-plugin</artifactId>
 				<version>2.10</version>
-				<configuration>
-					<skipTests>true</skipTests>
-				</configuration>
 				<executions>
 					<execution>
 						<id>copy-dependencies</id>
@@ -113,24 +110,6 @@
 						</configuration>
 					</execution>
 				</executions>
-			</plugin>
-			<plugin>
-				<!-- Then, define that in your install package the subfolder lib/ will 
-					contain all dependencies. -->
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-jar-plugin</artifactId>
-				<version>3.0.0</version>
-				<configuration>
-					<skipTests>true</skipTests>
-					<archive>
-						<manifest>
-							<addClasspath>true</addClasspath>
-							<mainClass>it.unimib.disco.essere.main.TerminalExecutor</mainClass>
-							<classpathLayoutType>custom</classpathLayoutType>
-							<customClasspathLayout>lib${file.separator}${artifact.groupId}.${artifact.artifactId}-${artifact.version}${dashClassifier?}.${artifact.extension}</customClasspathLayout>
-						</manifest>
-					</archive>
-				</configuration>
 			</plugin>
 			<plugin>
 				<!-- package our main jar and its dependencies in a zip and tar.gz file -->
@@ -152,6 +131,14 @@
 						</configuration>
 					</execution>
 				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>14</source>
+					<target>14</target>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>
@@ -230,6 +217,11 @@
 			<artifactId>commons-csv</artifactId>
 			<version>1.4</version>
 		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-math3</artifactId>
+			<version>3.6.1</version>
+		</dependency>
 		<!-- <dependency> <groupId>com.thinkaurelius.titan</groupId> <artifactId>titan-core</artifactId> 
 			<version>1.0.0</version> <exclusions> <exclusion> <artifactId>gremlin-core</artifactId> 
 			<groupId>org.apache.tinkerpop</groupId> </exclusion> <exclusion> <artifactId>gremlin-groovy</artifactId> 
@@ -249,7 +241,7 @@
 			<groupId>org.apache.bcel</groupId>
 			<artifactId>bcel</artifactId>
 			<!-- <version>5.2</version> -->
-			<version>6.0-RC3</version>
+			<version>6.3</version>
 		</dependency>
 		<dependency>
 			<groupId>commons-io</groupId>
@@ -378,74 +370,5 @@
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
-
-	<profiles>
-		<profile>
-			<id>release</id>
-			<properties>
-				<javadoc.opts>-Xdoclint:none</javadoc.opts>
-			</properties>
-			<build>
-				<plugins>
-					<!-- <plugin> <groupId>org.sonatype.plugins</groupId> <artifactId>nexus-staging-maven-plugin</artifactId> 
-						<version>1.6.7</version> <extensions>true</extensions> <configuration> <serverId>ossrh</serverId> 
-						<nexusUrl>https://oss.sonatype.org/</nexusUrl> <autoReleaseAfterClose>false</autoReleaseAfterClose> 
-						</configuration> </plugin> -->
-					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-gpg-plugin</artifactId>
-						<version>1.5</version>
-						<configuration>
-							<skipTests>true</skipTests>
-						</configuration>
-						<executions>
-							<execution>
-								<id>sign-artifacts</id>
-								<phase>verify</phase>
-								<goals>
-									<goal>sign</goal>
-								</goals>
-							</execution>
-						</executions>
-					</plugin>
-					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-source-plugin</artifactId>
-						<version>2.2.1</version>
-						<configuration>
-							<skipTests>true</skipTests>
-						</configuration>
-						<executions>
-							<execution>
-								<id>attach-sources</id>
-								<goals>
-									<goal>jar-no-fork</goal>
-								</goals>
-							</execution>
-						</executions>
-					</plugin>
-					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-javadoc-plugin</artifactId>
-						<version>2.9.1</version>
-						<configuration>
-							<skipTests>true</skipTests>
-						</configuration>
-						<executions>
-							<execution>
-								<id>attach-javadocs</id>
-								<goals>
-									<goal>jar</goal>
-								</goals>
-								<configuration>
-									<additionalparam>${javadoc.opts}</additionalparam>
-								</configuration>
-							</execution>
-						</executions>
-					</plugin>
-				</plugins>
-			</build>
-		</profile>
-	</profiles>
 
 </project>

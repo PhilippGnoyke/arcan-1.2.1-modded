@@ -16,10 +16,10 @@ public class ClassFilter
 
     public ClassFilter(String filePath) throws IOException
     {
-        getSharedClasses(filePath);
+        parseSharedClasses(filePath);
     }
 
-    private void getSharedClasses(String filePath) throws IOException
+    private void parseSharedClasses(String filePath) throws IOException
     {
         String header = "fullyQualifiedName";
         CSVParser records = CSVFormat.DEFAULT.withIgnoreHeaderCase().
@@ -51,4 +51,7 @@ public class ClassFilter
         return isSharedClass(fullyQualifiedName) || isSharedPackage(fullyQualifiedName);
     }
 
+    public Set<String> getSharedClasses() {
+        return sharedClasses;
+    }
 }

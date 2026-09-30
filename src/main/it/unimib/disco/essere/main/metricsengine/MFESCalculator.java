@@ -1,6 +1,5 @@
 package it.unimib.disco.essere.main.metricsengine;
 
-import it.unimib.disco.essere.main.graphmanager.EdgeMaps;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import org.apache.tinkerpop.gremlin.structure.Edge;
@@ -8,7 +7,7 @@ import org.apache.tinkerpop.gremlin.structure.Vertex;
 
 import java.util.*;
 
-public class MEFSCalculator
+public class MFESCalculator
 {
     private final Set<Vertex> remainingComps;
     private final List<Edge> edges;
@@ -28,7 +27,7 @@ public class MEFSCalculator
 
     private final PriorityQueue<Vertex> deltaQueue;
 
-    public MEFSCalculator(Set<Vertex> comps, List<Edge> edges)
+    public MFESCalculator(Set<Vertex> comps, List<Edge> edges)
     {
         this.remainingComps = new HashSet<>(comps);
         this.edges = edges;
@@ -52,29 +51,29 @@ public class MEFSCalculator
         return edgeFeedbackSetWOTinys;
     }
 
-    public int getMEFSSize()
+    public int getMFESSize()
     {
         return edgeFeedbackSet.size();
     }
 
-    public double getRelativeMEFSSize()
+    public double getRelativeMFESSize()
     {
         return (double) edgeFeedbackSet.size() / edges.size();
     }
 
-    public int getMEFSSizeWOTinys()
+    public int getMFESSizeWOTinys()
     {
         return edgeFeedbackSetWOTinys.size();
     }
 
-    public double getRelativeMEFSSizeWOTinys()
+    public double getRelativeMFESSizeWOTinys()
     {
         return (double) edgeFeedbackSetWOTinys.size() / edges.size();
     }
 
-    public double getMEFSSizeWOTinysReduction()
+    public double getMFESSizeWOTinysReduction()
     {
-        return (double) (getMEFSSize() - getMEFSSizeWOTinys()) / getMEFSSize();
+        return (double) (getMFESSize() - getMFESSizeWOTinys()) / getMFESSize();
     }
 
     private void initMaps()

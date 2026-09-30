@@ -88,23 +88,28 @@ public class SystemBuilderByJar extends SystemBuilder
                             JavaClass clazz = cParser.parse();
                             String className = clazz.getClassName();
                             exTimeLogger.logEventEnd(ETLE.Event.READ_PARSE_CLASS);
-                            if (classFilter == null || classFilter.isSharedClass(className))
+                            if(!getClassesStringSet().contains(className))
                             {
-                                exTimeLogger.logEventStart(ETLE.Event.READ_ADD_TO_REPO);
-                                repo.storeClass(clazz);
-                                exTimeLogger.logEventEnd(ETLE.Event.READ_ADD_TO_REPO);
-                                exTimeLogger.logEventStart(ETLE.Event.READ_ADD_TO_LISTS);
-                                this.getClasses().add(clazz);
-                                this.getPackages().add(GraphUtils.getPackageName(className));
-                                exTimeLogger.logEventEnd(ETLE.Event.READ_ADD_TO_LISTS);
+                                if (classFilter == null || classFilter.isSharedClass(className))
+                                {
+                                    exTimeLogger.logEventStart(ETLE.Event.READ_ADD_TO_REPO);
+                                    repo.storeClass(clazz);
+                                    exTimeLogger.logEventEnd(ETLE.Event.READ_ADD_TO_REPO);
+                                    exTimeLogger.logEventStart(ETLE.Event.READ_ADD_TO_LISTS);
+                                    this.getClasses().add(clazz);
+                                    this.getClassesStringSet().add(className);
+                                    this.getPackages().add(GraphUtils.getPackageName(className));
+                                    exTimeLogger.logEventEnd(ETLE.Event.READ_ADD_TO_LISTS);
+                                }
+                                else
+                                {
+                                    exTimeLogger.logEventStart(ETLE.Event.READ_ADD_TO_LISTS);
+                                    this.getExtClasses().add(className);
+                                    this.getExtPackages().add(GraphUtils.getPackageName(className));
+                                    exTimeLogger.logEventEnd(ETLE.Event.READ_ADD_TO_LISTS);
+                                }
                             }
-                            else
-                            {
-                                exTimeLogger.logEventStart(ETLE.Event.READ_ADD_TO_LISTS);
-                                this.getExtClasses().add(className);
-                                this.getExtPackages().add(GraphUtils.getPackageName(className));
-                                exTimeLogger.logEventEnd(ETLE.Event.READ_ADD_TO_LISTS);
-                            }
+
                         }
                     }
                 }

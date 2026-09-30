@@ -57,7 +57,7 @@ public class SuperCycleDetector
             event = ETLE.Event.CDS_SUPERCYLE_CLASS_CD_DETECTION;
             toBeSubtracted = new ETLE.Event[]{
                 ETLE.Event.CDS_SUBCYCLE_CLASS_CD_DETECTION,
-                ETLE.Event.CDS_SUPERCYCLE_CLASS_CD_MEFS,
+                ETLE.Event.CDS_SUPERCYCLE_CLASS_CD_MFES,
                 ETLE.Event.CDS_SUPERCYLE_CLASS_CD_SHAPE};
         }
         else
@@ -65,7 +65,7 @@ public class SuperCycleDetector
             event = ETLE.Event.CDS_SUPERCYLE_PACK_CD_DETECTION;
             toBeSubtracted = new ETLE.Event[]{
                 ETLE.Event.CDS_SUBCYCLE_PACK_CD_DETECTION,
-                ETLE.Event.CDS_SUPERCYCLE_PACK_CD_MEFS,
+                ETLE.Event.CDS_SUPERCYCLE_PACK_CD_MFES,
                 ETLE.Event.CDS_SUPERCYLE_PACK_CD_SHAPE};
         }
         exTimeLogger.logEventStart(event);

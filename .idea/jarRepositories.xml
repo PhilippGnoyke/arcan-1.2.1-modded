@@ -7,14 +7,19 @@
       <option name="url" value="http://maven.alfresco.com/nexus/content/repositories/public/" />
     </remote-repository>
     <remote-repository>
+      <option name="id" value="central" />
+      <option name="name" value="Central Repository" />
+      <option name="url" value="https://repo.maven.apache.org/maven2" />
+    </remote-repository>
+    <remote-repository>
       <option name="id" value="com.gitblit" />
       <option name="name" value="Gitblit" />
       <option name="url" value="http://gitblit.github.io/gitblit-maven/" />
     </remote-repository>
     <remote-repository>
-      <option name="id" value="central" />
-      <option name="name" value="Central Repository" />
-      <option name="url" value="https://repo.maven.apache.org/maven2" />
+      <option name="id" value="org.apache" />
+      <option name="name" value="alfresco" />
+      <option name="url" value="https://maven.alfresco.com/nexus/content/repositories/public/" />
     </remote-repository>
     <remote-repository>
       <option name="id" value="central" />
@@ -25,6 +30,11 @@
       <option name="id" value="jboss.community" />
       <option name="name" value="JBoss Community repository" />
       <option name="url" value="https://repository.jboss.org/nexus/content/repositories/public/" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="com.gitblit" />
+      <option name="name" value="Gitblit" />
+      <option name="url" value="https://gitblit.github.io/gitblit-maven/" />
     </remote-repository>
   </component>
 </project>

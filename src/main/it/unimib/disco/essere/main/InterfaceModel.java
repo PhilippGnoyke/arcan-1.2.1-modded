@@ -890,7 +890,7 @@ public class InterfaceModel
     {
         exTimeLogger.logEventStart(Event.ARCAN_PRINTING);
         AsTdEvolutionPrinter astdEPrinter = new AsTdEvolutionPrinter(outputDirUtils, _projectMetricsCalculator,
-            classSupercycles, packSupercycles, hds, uds, exTimeLogger, edgeMaps);
+            classSupercycles, packSupercycles, hds, uds, exTimeLogger, edgeMaps,_classFilter,classes,packages);
         astdEPrinter.printAll();
         return true;
     }

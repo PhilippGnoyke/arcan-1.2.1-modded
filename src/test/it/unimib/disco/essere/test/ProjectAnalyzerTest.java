@@ -278,7 +278,7 @@ public class ProjectAnalyzerTest {
                             .toFile());
             CSVPrinter printer = new CSVPrinter(writer, formatter);
 
-            List<JavaClass> projectClasses = sys.getClasses();
+            Set<JavaClass> projectClasses = sys.getClasses();
 
             for (JavaClass clazz : projectClasses) {
                 String className = clazz.getClassName();

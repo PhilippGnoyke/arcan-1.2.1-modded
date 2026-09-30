@@ -8,8 +8,9 @@ import org.apache.bcel.util.Repository;
 import org.apache.bcel.classfile.JavaClass;
 
 public abstract class SystemBuilder {
-	private List<JavaClass> classes;
-	private List<String> packages;
+	private Set<JavaClass> classes;
+	private Set<String> classesStringSet;
+	private Set<String> packages;
 	private Set<String> extClasses;
 	private Set<String> extPackages;
 	protected Repository repo;
@@ -25,11 +26,15 @@ public abstract class SystemBuilder {
 		}
 		return p;
 	}
-	public List<JavaClass> getClasses() {
+	public Set<JavaClass> getClasses() {
 		return classes;
 	}
 
-	public List<String> getPackages() {
+	public Set<String> getClassesStringSet() {
+		return classesStringSet;
+	}
+
+	public Set<String> getPackages() {
 		return packages;
 	}
 
@@ -51,8 +56,9 @@ public abstract class SystemBuilder {
 	}
 
 	protected SystemBuilder() {
-		classes = new ArrayList<>();
-		packages = new ArrayList<>();
+		classes = new HashSet<>();
+		classesStringSet = new HashSet<>();
+		packages = new HashSet<>();
 		extClasses = new HashSet<>();
 		extPackages = new HashSet<>();
 	}
