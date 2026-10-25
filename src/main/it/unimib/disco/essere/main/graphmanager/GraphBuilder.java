@@ -361,11 +361,11 @@ public class GraphBuilder
                 {
                     Edge edge = callerVertex.addEdge(edgeLabel, referencedclassVertex, PROPERTY_DEPEDENCY_WEIGHT.toString(), DEFAULT_NUM_DEPENDENCES);
                     edgeMaps.addEdgeToEdgeMaps(edge, callerVertex, referencedclassVertex, edgeLabel); //Modded
-                    if(!extClasses.contains(referencedclassVertex.value(GraphBuilder.PROPERTY_NAME).toString()))  //Modded
+                    if (_classes.containsKey(classInfo[0]))
                     {
-                        intClassDependencyCount++; //modded
+                        intClassDependencyCount++;
                     }
-                    totalClassDependencyCount++; //modded
+                    totalClassDependencyCount++;
                 }
                 else
                 {
@@ -616,7 +616,7 @@ public class GraphBuilder
                 PROPERTY_CLASS_MODIFIER, classModifier);
             // Modded
             classVertexMap.put(name, vertex);
-            if(extClasses.contains(name))
+            if (!_classes.containsKey(name))
             {
                 extClassesCount++;
             }
@@ -637,7 +637,7 @@ public class GraphBuilder
             Vertex vertex = graph.addVertex(T.label, nodeType, PROPERTY_NAME, name, PROPERTY_PACKAGE_TYPE, packageType);
             // Modded
             packageVertexMap.put(name, vertex);
-            if(extPackages.contains(name))
+            if (!_packages.containsKey(name))
             {
                 extPacksCount++;
             }

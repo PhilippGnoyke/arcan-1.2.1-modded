@@ -279,7 +279,8 @@ public class InterfaceModel
         edgeMaps = graphB.getEdgeMaps();
         for (Vertex pack : packages.values())
         {
-            if (GraphBuilder.SYSTEM_PACKAGE.equals(pack.value(GraphBuilder.PROPERTY_PACKAGE_TYPE)))
+            if (GraphBuilder.SYSTEM_PACKAGE.equals(
+                pack.value(GraphBuilder.PROPERTY_PACKAGE_TYPE)))
             {
                 totalPackCount++;
             }
